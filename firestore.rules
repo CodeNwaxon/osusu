@@ -20,9 +20,10 @@ service cloud.firestore {
       return isCEO() || isSubAdmin();
     }
 
-    // Admins Collection: Only CEO can read/write
+    // Admins Collection: Only CEO can write. Sub-admins can read their own doc.
     match /admins/{adminId} {
-      allow read, write: if isCEO();
+      allow read: if isCEO() || (isAuthenticated() && request.auth.uid == adminId);
+      allow write: if isCEO();
     }
 
     // Users Collection

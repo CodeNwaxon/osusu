@@ -36,34 +36,41 @@ export default function AdminManagementPage() {
   const { isCEO } = useAdmin();
   const [admins, setAdmins] = useState<AdminRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // All users cache (fetched once)
+
   const [allUsers, setAllUsers] = useState<UserRecord[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
 
-  // Search state
   const [searchEmail, setSearchEmail] = useState("");
   const [searchResults, setSearchResults] = useState<UserRecord[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([]);
-  
-  // Confirm Delete State
   const [deleteTarget, setDeleteTarget] = useState<AdminRecord | null>(null);
 
   useEffect(() => {
-    if (!isCEO) return;
+    console.log("AdminManagementPage mounted, isCEO:", isCEO);
+  }, [isCEO]);
+
+  useEffect(() => {
+    if (!isCEO) {
+      console.log("Not CEO, skipping data fetch");
+      return;
+    }
+    console.log("CEO detected, fetching data...");
     fetchAdmins();
     fetchAllUsers();
   }, [isCEO]);
 
   const fetchAdmins = async () => {
+    console.log("fetchAdmins called");
     setLoading(true);
     try {
       const snapshot = await getDocs(collection(db, "admins"));
+      console.log("Admins snapshot size:", snapshot.size);
       const adminList: AdminRecord[] = [];
       snapshot.forEach(doc => {
         adminList.push({ uid: doc.id, ...doc.data() } as AdminRecord);
       });
+      console.log("Admins list:", adminList);
       setAdmins(adminList);
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -74,23 +81,34 @@ export default function AdminManagementPage() {
   };
 
   const fetchAllUsers = async () => {
+    console.log("fetchAllUsers called");
     try {
       const snapshot = await getDocs(collection(db, "users"));
+      console.log("Users snapshot size:", snapshot.size);
       const userList: UserRecord[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        userList.push({ uid: doc.id, email: data.email || "", name: data.name || "" });
+        console.log("User doc:", doc.id, data);
+        userList.push({
+          uid: doc.id,
+          email: data.email || "",
+          name: data.name || "No name"
+        });
       });
+      console.log("Final user list:", userList);
       setAllUsers(userList);
       setUsersLoaded(true);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users list");
+      setUsersLoaded(true);
     }
   };
 
-  // Live search: filter users as the CEO types
   const handleSearchChange = useCallback((value: string) => {
+    console.log("Search input changed:", value);
+    console.log("All users available:", allUsers.length);
+
     setSearchEmail(value);
     setSelectedUser(null);
 
@@ -100,18 +118,19 @@ export default function AdminManagementPage() {
     }
 
     const query = value.toLowerCase();
-    const filtered = allUsers.filter(u => 
-      u.email.toLowerCase().includes(query) || 
-      u.name.toLowerCase().includes(query)
+    const filtered = allUsers.filter(u =>
+      u.email?.toLowerCase().includes(query) ||
+      u.name?.toLowerCase().includes(query)
     );
+    console.log("Filtered results:", filtered);
     setSearchResults(filtered);
   }, [allUsers]);
 
   const selectUser = (user: UserRecord) => {
+    console.log("User selected:", user);
     setSelectedUser(user);
     setSearchEmail(user.email);
     setSearchResults([]);
-    // Pre-select all routes by default
     setSelectedRoutes([...AVAILABLE_ROUTES]);
   };
 
@@ -154,7 +173,7 @@ export default function AdminManagementPage() {
     }
   };
 
-  if (!isCEO) {
+  if (isCEO === false) {
     return <div className="p-10 text-center text-muted-foreground">Access denied. CEO only.</div>;
   }
 
@@ -165,21 +184,26 @@ export default function AdminManagementPage() {
           <Shield className="w-6 h-6 text-primary" /> Admin Management
         </h1>
         <p className="text-muted-foreground mt-1">Assign and manage sub-admin roles and routes.</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Users loaded: {allUsers.length} | Users loaded state: {usersLoaded ? "✅" : "❌"}
+        </p>
       </div>
 
-      <Card>
+      {/* FIX: Added overflow-visible */}
+      <Card className="overflow-visible">
         <CardHeader>
           <CardTitle>Add New Admin</CardTitle>
           <CardDescription>Start typing a user&apos;s email to search registered users.</CardDescription>
         </CardHeader>
-        <CardContent>
+        {/* FIX: Added overflow-visible to CardContent too */}
+        <CardContent className="overflow-visible">
           <div className="relative">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search by email or name..." 
-                  value={searchEmail} 
+                <Input
+                  placeholder="Search by email or name..."
+                  value={searchEmail}
                   onChange={e => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
@@ -189,11 +213,16 @@ export default function AdminManagementPage() {
                   <Loader2 className="w-4 h-4 animate-spin" /> Loading users...
                 </div>
               )}
+              {usersLoaded && allUsers.length === 0 && (
+                <div className="flex items-center gap-2 text-sm text-red-500">
+                  ⚠️ No users found in database
+                </div>
+              )}
             </div>
 
             {/* Live search dropdown */}
             {searchResults.length > 0 && !selectedUser && (
-              <div className="absolute z-20 mt-1 w-full max-w-md bg-popover border rounded-lg shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+              <div className="absolute left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-900 border border-border rounded-lg shadow-2xl overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
                   {searchResults.map(user => (
                     <button
@@ -202,7 +231,7 @@ export default function AdminManagementPage() {
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent text-left transition-colors border-b last:border-b-0"
                     >
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
-                        {user.name?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
+                        {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{user.name || "No name"}</p>
@@ -223,15 +252,15 @@ export default function AdminManagementPage() {
 
           {/* Selected user — route assignment */}
           {selectedUser && (
-            <div className="mt-6 p-4 border rounded-lg bg-muted/20 animate-in fade-in">
+            <div className="mt-6 p-4 border rounded-lg bg-muted/20">
               <div className="font-medium text-lg">{selectedUser.name} <span className="text-sm text-muted-foreground font-normal">({selectedUser.email})</span></div>
-              
+
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Assign Routes:</p>
                 <div className="flex flex-wrap gap-2">
                   {AVAILABLE_ROUTES.map(route => (
-                    <Badge 
-                      key={route} 
+                    <Badge
+                      key={route}
                       variant={selectedRoutes.includes(route) ? "default" : "outline"}
                       className="cursor-pointer px-3 py-1 text-xs"
                       onClick={() => toggleRoute(route)}
@@ -244,7 +273,7 @@ export default function AdminManagementPage() {
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => { setSelectedUser(null); setSearchEmail(""); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setSelectedUser(null); setSearchEmail(""); setSearchResults([]); }}>Cancel</Button>
                 <Button onClick={handleMakeAdmin}>Make Admin</Button>
               </div>
             </div>
@@ -299,10 +328,9 @@ export default function AdminManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Custom Confirm Card for Deletion */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md shadow-lg animate-in zoom-in-95">
+          <Card className="w-full max-w-md shadow-lg">
             <CardHeader>
               <CardTitle className="text-destructive flex items-center gap-2">
                 <X className="w-5 h-5" /> Remove Admin

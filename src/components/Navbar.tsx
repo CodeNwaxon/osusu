@@ -8,12 +8,14 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, Menu, X, Home, PlusCircle, HelpCircle, Shield, Phone, FileText } from "lucide-react";
+import { LogOut, Menu, X, Home, PlusCircle, HelpCircle, Shield, Phone, FileText, LayoutDashboard, Users, Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export function Navbar() {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isCEO, adminRoutes } = useAdmin();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -79,7 +81,7 @@ export function Navbar() {
 
           {isAdmin && (
             <Link href="/admin" className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
-              <Shield className="w-4 h-4" /> CEO Panel
+              <Shield className="w-4 h-4" /> {isCEO ? "CEO Panel" : "Admin Panel"}
             </Link>
           )}
 
@@ -117,16 +119,69 @@ export function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border/40 bg-background p-4 space-y-3 animate-in slide-in-from-top-2">
-          <Link href="/" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Home className="w-4 h-4" /> Home</Link>
-          <Link href="/create-group" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><PlusCircle className="w-4 h-4" /> Create Group</Link>
-          <Link href="/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> FAQ</Link>
-          <Link href="/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> About Us</Link>
-          <Link href="/contact" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Phone className="w-4 h-4" /> Contact Us</Link>
-
-          {isAdmin && (
-            <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2 text-orange-600" onClick={() => setMobileOpen(false)}>
-              <Shield className="w-4 h-4" /> CEO Panel
-            </Link>
+          {pathname?.startsWith("/admin") ? (
+            // Admin Mobile Menu
+            <>
+              <Link href="/" className="flex items-center gap-2 text-sm font-medium py-2 text-primary" onClick={() => setMobileOpen(false)}>
+                <Home className="w-4 h-4" /> Go to Home
+              </Link>
+              <div className="border-t border-border/40 pt-2 my-2" />
+              
+              <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                <LayoutDashboard className="w-4 h-4" /> Dashboard
+              </Link>
+              
+              {(isCEO || adminRoutes.includes("/admin/management") || adminRoutes.includes("*")) && (
+                <Link href="/admin/management" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <Users className="w-4 h-4" /> Admin Management
+                </Link>
+              )}
+              
+              {(isCEO || adminRoutes.includes("/admin/settings") || adminRoutes.includes("*")) && (
+                <Link href="/admin/settings" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <Settings className="w-4 h-4" /> Settings CMS
+                </Link>
+              )}
+              
+              {(isCEO || adminRoutes.includes("/admin/complaints") || adminRoutes.includes("*")) && (
+                <Link href="/admin/complaints" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <Phone className="w-4 h-4" /> Complaints
+                </Link>
+              )}
+              
+              {(isCEO || adminRoutes.includes("/admin/faq") || adminRoutes.includes("*")) && (
+                <Link href="/admin/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <HelpCircle className="w-4 h-4" /> Manage FAQ
+                </Link>
+              )}
+              
+              {(isCEO || adminRoutes.includes("/admin/terms") || adminRoutes.includes("*")) && (
+                <Link href="/admin/terms" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <FileText className="w-4 h-4" /> Terms & Conditions
+                </Link>
+              )}
+              
+              {(isCEO || adminRoutes.includes("/admin/about") || adminRoutes.includes("*")) && (
+                <Link href="/admin/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <FileText className="w-4 h-4" /> About & CEO
+                </Link>
+              )}
+            </>
+          ) : (
+            // Regular Mobile Menu
+            <>
+              <Link href="/" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Home className="w-4 h-4" /> Home</Link>
+              <Link href="/create-group" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><PlusCircle className="w-4 h-4" /> Create Group</Link>
+              <Link href="/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> FAQ</Link>
+              <Link href="/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> About Us</Link>
+              <Link href="/contact" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Phone className="w-4 h-4" /> Contact Us</Link>
+    
+              {isAdmin && (
+                <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2 text-orange-600" onClick={() => setMobileOpen(false)}>
+                  <Shield className="w-4 h-4" /> {isCEO ? "CEO Panel" : "Admin Panel"}
+                </Link>
+              )}
+            </>
           )}
 
           {user ? (

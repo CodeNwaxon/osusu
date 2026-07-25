@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-muted/20 p-4 space-y-2 shrink-0">
+      <aside className="hidden md:block w-64 border-r border-border bg-muted/20 p-4 space-y-2 shrink-0">
         <div className="pb-4 mb-4 border-b border-border">
           <h2 className="text-lg font-bold">Admin Portal</h2>
           <p className="text-xs text-muted-foreground">Manage Osusu 9ja</p>
