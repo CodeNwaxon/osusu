@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,8 +42,7 @@ export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const { isCEO, adminRoutes } = useAdmin();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,37 +54,8 @@ export default function AdminPage() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Check if user is admin
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (authLoading) return;
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists() && userDoc.data().isAdmin === true) {
-          setIsAdmin(true);
-        } else {
-          toast.error("You do not have admin access.");
-          router.push("/");
-        }
-      } catch (error) {
-        console.error("Error checking admin:", error);
-        router.push("/");
-      } finally {
-        setCheckingAdmin(false);
-      }
-    };
-    checkAdmin();
-  }, [user, authLoading, router]);
-
   // Fetch all users
   useEffect(() => {
-    if (!isAdmin) return;
-
     const fetchUsers = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -113,7 +84,7 @@ export default function AdminPage() {
 
     fetchUsers();
     fetchSettings();
-  }, [isAdmin]);
+  }, []);
 
   const handleSaveSettings = async () => {
     setSavingSettings(true);
@@ -133,15 +104,6 @@ export default function AdminPage() {
       u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (authLoading || checkingAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-pulse text-muted-foreground">Checking access...</div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) return null;
 
   return (
     <div className="container mx-auto py-10 px-4 md:px-6 space-y-8">

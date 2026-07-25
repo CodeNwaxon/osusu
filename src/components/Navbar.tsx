@@ -3,21 +3,35 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/store/useAuth";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { LogOut, Menu, X, Home, PlusCircle, HelpCircle, Shield, Phone, FileText } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 export function Navbar() {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await signOut(auth);
     toast.success("Logged out successfully");
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(event.target as Node)) {
+        setHelpOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -33,14 +47,44 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Home
+        <div className="hidden md:flex items-center md:gap-8 gap-4">
+          <Link href="/" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Home className="w-4 h-4" /> Home
           </Link>
-          <Link href="/create-group" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            Create Group
+          <Link href="/create-group" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <PlusCircle className="w-4 h-4" /> Create Group
           </Link>
+
+          <div className="relative" ref={helpRef}>
+            <button
+              onClick={() => setHelpOpen(!helpOpen)}
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4" /> Help
+            </button>
+            {helpOpen && (
+              <div className="absolute top-full right-0 mt-2 w-40 bg-background border border-border rounded-md shadow-md py-1 animate-in fade-in zoom-in-95">
+                <Link href="/faq" onClick={() => setHelpOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors">
+                  <FileText className="w-4 h-4" /> FAQ
+                </Link>
+                <Link href="/about" onClick={() => setHelpOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors">
+                  <FileText className="w-4 h-4" /> About Us
+                </Link>
+                <Link href="/contact" onClick={() => setHelpOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors">
+                  <Phone className="w-4 h-4" /> Contact Us
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {isAdmin && (
+            <Link href="/admin" className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
+              <Shield className="w-4 h-4" /> CEO Panel
+            </Link>
+          )}
+
           <ThemeToggle />
+
           {user ? (
             <div className="flex items-center gap-3">
               {user.photoURL && (
@@ -73,8 +117,18 @@ export function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border/40 bg-background p-4 space-y-3 animate-in slide-in-from-top-2">
-          <Link href="/" className="block text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>Home</Link>
-          <Link href="/create-group" className="block text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>Create Group</Link>
+          <Link href="/" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Home className="w-4 h-4" /> Home</Link>
+          <Link href="/create-group" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><PlusCircle className="w-4 h-4" /> Create Group</Link>
+          <Link href="/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> FAQ</Link>
+          <Link href="/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> About Us</Link>
+          <Link href="/contact" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Phone className="w-4 h-4" /> Contact Us</Link>
+
+          {isAdmin && (
+            <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2 text-orange-600" onClick={() => setMobileOpen(false)}>
+              <Shield className="w-4 h-4" /> CEO Panel
+            </Link>
+          )}
+
           {user ? (
             <div className="flex items-center justify-between pt-2 border-t border-border/40">
               <div className="flex items-center gap-2">
@@ -97,3 +151,4 @@ export function Navbar() {
     </nav>
   );
 }
+

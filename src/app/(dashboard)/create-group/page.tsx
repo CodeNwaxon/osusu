@@ -142,11 +142,31 @@ export default function CreateGroupPage() {
                   <FormField
                     control={form.control}
                     name="amount"
-                    render={({ field }: { field: any }) => (
+                    render={({ field: { value, onChange, ...field } }: { field: any }) => (
                       <FormItem>
-                        <FormLabel>Contribution Amount (₦)</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Contribution Amount (₦)
+                          <button 
+                            type="button" 
+                            onClick={() => toast.info("This is the amount each member contributes per cycle")} 
+                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                          >
+                            !
+                          </button>
+                        </FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="50000" {...field} />
+                          <Input 
+                            type="text" 
+                            placeholder="50,000" 
+                            {...field}
+                            value={value ? Number(value).toLocaleString() : ""}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/,/g, "");
+                              if (!isNaN(Number(val))) {
+                                onChange(val);
+                              }
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -288,6 +308,11 @@ export default function CreateGroupPage() {
                 </div>
               </div>
 
+              {!user && (
+                <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 p-3 rounded-md text-center font-medium">
+                  Please sign in to create a contribution group.
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Creating Group..." : "Create Osusu Group"}
               </Button>

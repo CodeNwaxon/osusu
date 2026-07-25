@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCEO() {
+      return isAuthenticated() && request.auth.uid == 'srmS0wC9OeczVXnzB3VN1C5YYUS2';
+    }
+
+    function isSubAdmin() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isCEO() || isSubAdmin();
+    }
+
+    // Admins Collection: Only CEO can read/write
+    match /admins/{adminId} {
+      allow read, write: if isCEO();
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Anyone can read for search/display purposes, or restrict to auth
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+    }
+
+    // Groups Collection
+    match /groups/{groupId} {
+      allow read: if isAuthenticated();
+      // Allow group creators or members to write, or admins
+      allow write: if isAdmin() || isAuthenticated();
+      
+      // Group Members Subcollection
+      match /members/{memberId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Complaints Collection
+    match /complaints/{complaintId} {
+      allow create: if true; // Public can create complaints (contact us)
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Global Settings, FAQ, Terms
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /faq/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /terms/{termId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // About page settings
+    match /about/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default fallback (block everything else)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

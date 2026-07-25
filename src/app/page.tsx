@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, limit, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, limit, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,18 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Users, Shield, TrendingUp, ArrowRight } from "lucide-react";
+import { Search, Users, Shield, TrendingUp, ArrowRight, Phone, Mail } from "lucide-react";
 import { Reviews } from "@/components/Reviews";
 import { FinancialNews } from "@/components/FinancialNews";
+import { AppSettings } from "./admin/settings/page";
+
+// Fallback image - using a data URI SVG placeholder (no local file needed)
+const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='45%25' font-family='Arial' font-size='48' fill='%23f59e0b' text-anchor='middle' dy='.3em'%3E💰 Osusu%3C/text%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EBuild Wealth Together%3C/text%3E%3C/svg%3E";
 
 export default function Home() {
   const [groups, setGroups] = useState<any[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    const fetchGroups = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch groups
         const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(10));
         const querySnapshot = await getDocs(q);
         const fetchedGroups: any[] = [];
@@ -28,46 +37,93 @@ export default function Home() {
           fetchedGroups.push({ id: doc.id, ...doc.data() });
         });
         setGroups(fetchedGroups);
+
+        // Fetch settings
+        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
+        if (settingsSnap.exists()) {
+          setSettings(settingsSnap.data() as AppSettings);
+        }
       } catch (error) {
-        console.error("Error fetching groups:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchGroups();
+    fetchData();
   }, []);
+
+  // Image rotation with smooth transition
+  useEffect(() => {
+    if (settings?.heroImages && settings.heroImages.length > 1) {
+      const interval = setInterval(() => {
+        setImageLoaded(false); // Reset for next image
+        setImageError(false);
+        setCurrentImageIdx((prev) => (prev + 1) % settings.heroImages.length);
+      }, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [settings?.heroImages]);
 
   const filteredGroups = groups.filter(g =>
     g.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Determine which image to show
+  const heroImages = settings?.heroImages || [];
+  const hasImages = heroImages.length > 0;
+  const heroImageSrc = hasImages && !imageError
+    ? heroImages[currentImageIdx] || FALLBACK_IMAGE
+    : FALLBACK_IMAGE;
+
+  const heroText = settings?.heroText || "Create or join a transparent, secure, and reliable Osusu group with people you trust. Track every payment, every payout, every naira.";
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative w-full min-h-[400px] md:min-h-[560px] overflow-hidden">
-        <Image
-          src="/osusu_hero.png"
-          alt="Osusu Group Contribution"
-          fill
-          className="object-cover brightness-[0.4]"
-          priority
-        />
-        {/* Gradient overlay - reduced */}
+
+      {/* Hero Section with Smooth Image Transition */}
+      <div className="relative w-full min-h-[400px] md:min-h-[560px] overflow-hidden bg-background">
+        {/* Image with smooth fade transition */}
+        <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out">
+          <Image
+            src={heroImageSrc}
+            alt="Osusu Group Contribution"
+            fill
+            className={`
+              object-cover brightness-[0.4] 
+              transition-all duration-500 ease-in-out
+              ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
+            `}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(true);
+            }}
+            priority
+            key={heroImageSrc} // Forces re-render on image change
+            sizes="100vw"
+          />
+        </div>
+
+        {/* Loading shimmer effect while image loads */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-muted/30 to-background animate-pulse" />
+        )}
+
+        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background/60" />
 
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 md:px-8 py-16 md:py-24 max-w-4xl mx-auto">
-
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-5 leading-tight">
+        {/* Hero Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 md:px-8 py-16 md:py-24 max-w-4xl mx-auto min-h-[400px] md:min-h-[560px]">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-5 leading-tight animate-in slide-in-from-bottom-5">
             Build Wealth{" "}
             <span className="bg-gradient-to-r from-orange-300 to-yellow-200 bg-clip-text text-transparent">
               Together
             </span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl text-white/80 mb-6 md:mb-10 max-w-2xl leading-relaxed">
-            Create or join a transparent, secure, and reliable Osusu group with people you trust.
-            Track every payment, every payout, every naira.
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 md:mb-10 max-w-2xl leading-relaxed animate-in slide-in-from-bottom-6 fade-in duration-700">
+            {heroText}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto animate-in slide-in-from-bottom-8 fade-in duration-1000">
             <Link
               href="/create-group"
               className={buttonVariants({
@@ -82,12 +138,33 @@ export default function Home() {
               href="/login"
               className={buttonVariants({
                 size: "lg",
-                className: "bg-transparent border-2 border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto",
+                className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
               })}
             >
               Sign In
             </Link>
           </div>
+
+          {/* Image indicator dots (optional) */}
+          {hasImages && heroImages.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+              {heroImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setImageLoaded(false);
+                    setImageError(false);
+                    setCurrentImageIdx(idx);
+                  }}
+                  className={`
+                    w-1 h-1 rounded-full transition-all duration-300
+                    ${idx === currentImageIdx ? 'bg-white w-3' : 'bg-white/40 hover:bg-white/60'}
+                  `}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -218,6 +295,18 @@ export default function Home() {
 
       {/* Reviews Section */}
       <Reviews />
+
+      {/* Customer Care Banner */}
+      {settings && (
+        <div className="bg-primary/5 border-b border-primary/10 py-2">
+          <div className="container mx-auto px-4 md:px-6 flex flex-wrap items-center justify-center gap-4 md:gap-8 text-xs sm:text-sm font-medium text-muted-foreground">
+            <span className="flex items-center gap-1.5"><Phone className="w-4 h-4 text-primary" /> {settings.contactPhone}</span>
+            <span className="flex items-center gap-1.5"><Mail className="w-4 h-4 text-primary" /> {settings.contactEmail}</span>
+            <Link href="/contact" className="hover:text-primary transition-colors hover:underline">Need Help?</Link>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
