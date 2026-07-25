@@ -52,8 +52,8 @@ export default function Home() {
           className="object-cover brightness-[0.4]"
           priority
         />
-        {/* Gradient overlay for smoother blend */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background" />
+        {/* Gradient overlay - reduced */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background/60" />
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 md:px-8 py-16 md:py-24 max-w-4xl mx-auto">
 
@@ -72,7 +72,7 @@ export default function Home() {
               href="/create-group"
               className={buttonVariants({
                 size: "lg",
-                className: "bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white font-semibold text-base px-8 h-12 rounded-full shadow-lg shadow-primary/25 w-full sm:w-auto",
+                className: "bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white font-semibold text-base px-6 md:px-8 h-12 rounded-full shadow-lg shadow-primary/25 w-auto",
               })}
             >
               Create a Group
@@ -82,7 +82,7 @@ export default function Home() {
               href="/login"
               className={buttonVariants({
                 size: "lg",
-                className: "bg-transparent border border-2 border-gray-50 text-white hover:bg-white/10 font-semibold text-base px-8 h-12 rounded-full w-full sm:w-auto",
+                className: "bg-transparent border-2 border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto",
               })}
             >
               Sign In
@@ -110,7 +110,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-semibold text-foreground text-xs md:text-sm">Trusted Community</h3>
-                <p className="hidden md:blocktext-xs text-muted-foreground">Trust scores and ratings keep everyone accountable.</p>
+                <p className="hidden md:block text-xs text-muted-foreground">Trust scores and ratings keep everyone accountable.</p>
               </div>
             </div>
             <div className="flex items-center justify-center gap-1 md:gap-4">
@@ -211,7 +211,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Financial News Section (max 4 cards) */}
+      {/* Financial News Section */}
       <div className="mx-auto py-4 md:py-6 px-2 md:px-6">
         <FinancialNews />
       </div>
