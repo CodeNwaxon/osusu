@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Shield, Trash2, Check, X, UserPlus, Loader2 } from "lucide-react";
+import { Search, Shield, Trash2, Check, X, UserPlus, Loader2, Pencil } from "lucide-react";
 
 interface AdminRecord {
   uid: string;
@@ -25,6 +25,7 @@ interface UserRecord {
 }
 
 const AVAILABLE_ROUTES = [
+  "/admin/statistics",
   "/admin/settings",
   "/admin/complaints",
   "/admin/faq",
@@ -45,6 +46,8 @@ export default function AdminManagementPage() {
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [selectedRoutes, setSelectedRoutes] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<AdminRecord | null>(null);
+  const [editTarget, setEditTarget] = useState<AdminRecord | null>(null);
+  const [editRoutes, setEditRoutes] = useState<string[]>([]);
 
   useEffect(() => {
     console.log("AdminManagementPage mounted, isCEO:", isCEO);
@@ -158,6 +161,35 @@ export default function AdminManagementPage() {
     } catch (error) {
       console.error("Error making admin:", error);
       toast.error("Failed to make admin");
+    }
+  };
+
+  const handleEditClick = (admin: AdminRecord) => {
+    setEditTarget(admin);
+    setEditRoutes(admin.routes || []);
+  };
+
+  const toggleEditRoute = (route: string) => {
+    if (editRoutes.includes(route)) {
+      setEditRoutes(editRoutes.filter(r => r !== route));
+    } else {
+      setEditRoutes([...editRoutes, route]);
+    }
+  };
+
+  const handleUpdateAdmin = async () => {
+    if (!editTarget) return;
+    try {
+      await setDoc(doc(db, "admins", editTarget.uid), {
+        email: editTarget.email,
+        routes: editRoutes,
+      }, { merge: true });
+      toast.success("Admin routes updated successfully");
+      setEditTarget(null);
+      fetchAdmins();
+    } catch (error) {
+      console.error("Error updating admin:", error);
+      toast.error("Failed to update admin routes");
     }
   };
 
@@ -310,7 +342,10 @@ export default function AdminManagementPage() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10" onClick={() => handleEditClick(admin)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(admin)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -342,6 +377,44 @@ export default function AdminManagementPage() {
             <CardContent className="flex justify-end gap-3 mt-4">
               <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
               <Button variant="destructive" onClick={() => handleDeleteAdmin(deleteTarget.uid)}>Yes, Remove Admin</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-primary" /> Edit Admin Routes
+              </CardTitle>
+              <CardDescription>
+                Update access routes for <strong className="text-foreground">{editTarget.email}</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mt-2">
+                <p className="text-sm font-medium mb-2">Assign Routes:</p>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_ROUTES.map(route => (
+                    <Badge
+                      key={route}
+                      variant={editRoutes.includes(route) ? "default" : "outline"}
+                      className="cursor-pointer px-3 py-1 text-xs"
+                      onClick={() => toggleEditRoute(route)}
+                    >
+                      {editRoutes.includes(route) && <Check className="w-3 h-3 mr-1 inline" />}
+                      {route}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+                <Button onClick={handleUpdateAdmin}>Save Changes</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

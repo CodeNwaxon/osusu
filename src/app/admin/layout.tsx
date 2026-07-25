@@ -4,7 +4,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Users, Settings, Phone, FileText, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Phone, FileText, HelpCircle, BarChart3 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin, isCEO, adminRoutes, loadingAdmin } = useAdmin();
@@ -55,6 +55,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <LayoutDashboard className="w-4 h-4" /> Dashboard
           </Link>
+
+          {(isCEO || adminRoutes.includes("/admin/statistics") || adminRoutes.includes("*")) && (
+            <Link 
+              href="/admin/statistics" 
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${pathname.startsWith("/admin/statistics") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+            >
+              <BarChart3 className="w-4 h-4" /> Platform Statistics
+            </Link>
+          )}
           
           {(isCEO || adminRoutes.includes("/admin/management") || adminRoutes.includes("*")) && (
             <Link 
