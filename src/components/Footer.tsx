@@ -14,8 +14,8 @@ export function Footer() {
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center">
                 <img src="/osusu_logo2.png" alt="site logo" className="h-9 w-9 rounded-full object-cover" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
-                Osusu
+              <span className="text-sm md:text-xl font-bold bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
+                Osusu 9ja
               </span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs leading-relaxed">
