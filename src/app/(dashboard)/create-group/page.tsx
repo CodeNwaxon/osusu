@@ -110,7 +110,7 @@ export default function CreateGroupPage() {
   };
 
   return (
-    <div className="container mx-auto py-10 max-w-2xl px-3 md:px-0">
+    <div className="container mx-auto py-10 max-w-2xl">
       <Card>
         <CardHeader>
           <CardTitle>Create an Osusu Group</CardTitle>
@@ -119,26 +119,24 @@ export default function CreateGroupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
+              
               <div className="space-y-4">
                 <h3 className="text-lg font-medium border-b pb-2">Group Details</h3>
-                <div className="py-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }: { field: any }) => (
-                      <FormItem>
-                        <FormLabel>Group Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E.g. Lagos Tech Bros Osusu" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }: { field: any }) => (
+                    <FormItem>
+                      <FormLabel>Group Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="E.g. Lagos Tech Bros Osusu" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="py-4 grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="amount"
@@ -187,7 +185,7 @@ export default function CreateGroupPage() {
                   />
                 </div>
 
-                <div className="py-4 grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="duration"
@@ -227,7 +225,7 @@ export default function CreateGroupPage() {
                       <FormItem>
                         <FormLabel>Charge Type</FormLabel>
                         <FormControl>
-                          <select
+                          <select 
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             {...field}
                           >
@@ -240,7 +238,7 @@ export default function CreateGroupPage() {
                       </FormItem>
                     )}
                   />
-
+                  
                   {watchChargeType !== "none" && (
                     <FormField
                       control={form.control}
@@ -259,7 +257,7 @@ export default function CreateGroupPage() {
                     />
                   )}
                 </div>
-
+                
                 <ChargePreview control={form.control as any} />
               </div>
 
