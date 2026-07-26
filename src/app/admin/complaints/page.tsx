@@ -116,11 +116,14 @@ export default function AdminComplaintsPage() {
                   {complaint.createdAt?.toDate ? formatDistanceToNow(complaint.createdAt.toDate(), { addSuffix: true }) : "Recently"}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800" asChild>
-                    <a href={`https://wa.me/${cleanPhoneForWhatsApp(complaint.phone)}`} target="_blank" rel="noopener noreferrer">
-                      <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
-                    </a>
-                  </Button>
+                  <a 
+                    href={`https://wa.me/${cleanPhoneForWhatsApp(complaint.phone)}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 h-9 px-3"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                  </a>
                   <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(complaint.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>

@@ -1,8 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import { FaTwitter, FaInstagram, FaFacebookF, FaLinkedinIn } from "react-icons/fa";
+import { useAuth } from "@/store/useAuth";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { toast } from "sonner";
+import { LogOut, LogIn } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Logged out successfully");
+    } catch {
+      toast.error("Failed to log out");
+    }
+  };
 
   return (
     <footer className="border-t border-border/40 bg-card">
@@ -28,7 +45,22 @@ export function Footer() {
             <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Platform</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li><Link href="/create-group" className="hover:text-foreground transition-colors">Create a Group</Link></li>
-              <li><Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link></li>
+              <li>
+                {user ? (
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <Link href="/login" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                    <LogIn className="w-3.5 h-3.5" />
+                    Sign In
+                  </Link>
+                )}
+              </li>
               <li><Link href="/" className="hover:text-foreground transition-colors">Discover Groups</Link></li>
             </ul>
           </div>

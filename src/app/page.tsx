@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/store/useAuth";
 import { collection, query, limit, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { AppSettings } from "./admin/settings/page";
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='45%25' font-family='Arial' font-size='48' fill='%23f59e0b' text-anchor='middle' dy='.3em'%3E💰 Osusu%3C/text%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EBuild Wealth Together%3C/text%3E%3C/svg%3E";
 
 export default function Home() {
+  const { user } = useAuth();
   const [groups, setGroups] = useState<any[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -134,15 +136,28 @@ export default function Home() {
               Create a Group
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <Link
-              href="/login"
-              className={buttonVariants({
-                size: "lg",
-                className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
-              })}
-            >
-              Sign In
-            </Link>
+            {user ? (
+              <Link
+                href="/dashboard"
+                className={buttonVariants({
+                  size: "lg",
+                  className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
+                })}
+              >
+                My Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className={buttonVariants({
+                  size: "lg",
+                  className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
+                })}
+              >
+                Join Osusu
+              </Link>
+            )}
           </div>
 
           {/* Image indicator dots (optional) */}

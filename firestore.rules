@@ -43,6 +43,11 @@ service cloud.firestore {
       match /members/{memberId} {
         allow read, write: if isAuthenticated();
       }
+
+      // Group Messages Subcollection (Chat)
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
     }
 
     // Complaints Collection
