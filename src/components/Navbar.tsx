@@ -37,7 +37,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center">
@@ -80,7 +80,7 @@ export function Navbar() {
           </div>
 
           {isAdmin && (
-            <Link href="/admin" className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
+            <Link href="/admin" className="flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors px-3 py-1.5">
               <Shield className="w-4 h-4" /> {isCEO ? "CEO Panel" : "Admin Panel"}
             </Link>
           )}
@@ -126,41 +126,41 @@ export function Navbar() {
                 <Home className="w-4 h-4" /> Go to Home
               </Link>
               <div className="border-t border-border/40 pt-2 my-2" />
-              
+
               <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                 <LayoutDashboard className="w-4 h-4" /> Dashboard
               </Link>
-              
+
               {(isCEO || adminRoutes.includes("/admin/management") || adminRoutes.includes("*")) && (
                 <Link href="/admin/management" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <Users className="w-4 h-4" /> Admin Management
                 </Link>
               )}
-              
+
               {(isCEO || adminRoutes.includes("/admin/settings") || adminRoutes.includes("*")) && (
                 <Link href="/admin/settings" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <Settings className="w-4 h-4" /> Settings CMS
                 </Link>
               )}
-              
+
               {(isCEO || adminRoutes.includes("/admin/complaints") || adminRoutes.includes("*")) && (
                 <Link href="/admin/complaints" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <Phone className="w-4 h-4" /> Complaints
                 </Link>
               )}
-              
+
               {(isCEO || adminRoutes.includes("/admin/faq") || adminRoutes.includes("*")) && (
                 <Link href="/admin/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <HelpCircle className="w-4 h-4" /> Manage FAQ
                 </Link>
               )}
-              
+
               {(isCEO || adminRoutes.includes("/admin/terms") || adminRoutes.includes("*")) && (
                 <Link href="/admin/terms" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <FileText className="w-4 h-4" /> Terms & Conditions
                 </Link>
               )}
-              
+
               {(isCEO || adminRoutes.includes("/admin/about") || adminRoutes.includes("*")) && (
                 <Link href="/admin/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <FileText className="w-4 h-4" /> About & CEO
@@ -175,7 +175,7 @@ export function Navbar() {
               <Link href="/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> FAQ</Link>
               <Link href="/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> About Us</Link>
               <Link href="/contact" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Phone className="w-4 h-4" /> Contact Us</Link>
-    
+
               {isAdmin && (
                 <Link href="/admin" className="flex items-center gap-2 text-sm font-medium py-2 text-orange-600" onClick={() => setMobileOpen(false)}>
                   <Shield className="w-4 h-4" /> {isCEO ? "CEO Panel" : "Admin Panel"}
