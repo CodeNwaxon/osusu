@@ -74,8 +74,8 @@ export default function Home() {
   const heroImages = settings?.heroImages || [];
   const hasImages = heroImages.length > 0;
   const heroImageSrc = hasImages && !imageError
-    ? heroImages[currentImageIdx]
-    : null;
+    ? heroImages[currentImageIdx] || FALLBACK_IMAGE
+    : FALLBACK_IMAGE;
 
   const heroText = settings?.heroText || "Create or join a transparent, secure, and reliable Osusu group with people you trust. Track every payment, every payout, every naira.";
 
@@ -85,31 +85,29 @@ export default function Home() {
       {/* Hero Section with Smooth Image Transition */}
       <div className="relative w-full min-h-[400px] md:min-h-[560px] overflow-hidden bg-background">
         {/* Image with smooth fade transition */}
-        <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out bg-primary/20">
-          {heroImageSrc && (
-            <Image
-              src={heroImageSrc}
-              alt="Osusu Group Contribution"
-              fill
-              className={`
-                object-cover brightness-[0.4] 
-                transition-all duration-500 ease-in-out
-                ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
-              `}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => {
-                setImageError(true);
-                setImageLoaded(true);
-              }}
-              priority
-              key={heroImageSrc} // Forces re-render on image change
-              sizes="100vw"
-            />
-          )}
+        <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out">
+          <Image
+            src={heroImageSrc}
+            alt="Osusu Group Contribution"
+            fill
+            className={`
+              object-cover brightness-[0.4] 
+              transition-all duration-500 ease-in-out
+              ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}
+            `}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageError(true);
+              setImageLoaded(true);
+            }}
+            priority
+            key={heroImageSrc} // Forces re-render on image change
+            sizes="100vw"
+          />
         </div>
 
         {/* Loading shimmer effect while image loads */}
-        {heroImageSrc && !imageLoaded && (
+        {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-r from-background via-muted/30 to-background animate-pulse" />
         )}
 
@@ -157,7 +155,7 @@ export default function Home() {
                   className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
                 })}
               >
-                Sign In
+                Join Osusu
               </Link>
             )}
           </div>
