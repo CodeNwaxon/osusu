@@ -28,8 +28,18 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Fetch settings first (public, no auth required)
       try {
-        // Fetch groups
+        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
+        if (settingsSnap.exists()) {
+          setSettings(settingsSnap.data() as AppSettings);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      }
+
+      // Fetch groups separately (requires auth, may fail for logged-out users)
+      try {
         const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(10));
         const querySnapshot = await getDocs(q);
         const fetchedGroups: any[] = [];
@@ -37,17 +47,11 @@ export default function Home() {
           fetchedGroups.push({ id: doc.id, ...doc.data() });
         });
         setGroups(fetchedGroups);
-
-        // Fetch settings
-        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
-        if (settingsSnap.exists()) {
-          setSettings(settingsSnap.data() as AppSettings);
-        }
       } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching groups:", error);
       }
+
+      setLoading(false);
     };
     fetchData();
   }, []);
