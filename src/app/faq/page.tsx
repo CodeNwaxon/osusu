@@ -57,7 +57,7 @@ export default function FAQPage() {
           ))}
         </div>
       ) : faqs.length > 0 ? (
-        <Accordion className="w-full space-y-4">
+        <Accordion type="single" collapsible className="w-full space-y-4">
           {faqs.map((faq, index) => (
             <AccordionItem key={faq.id} value={`item-${index}`} className="border rounded-lg px-4 bg-card shadow-sm">
               <AccordionTrigger className="text-left font-semibold hover:no-underline hover:text-primary">

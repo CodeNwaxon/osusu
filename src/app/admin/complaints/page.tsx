@@ -16,13 +16,17 @@ interface Complaint {
   phone: string;
   message: string;
   status: string;
-  createdAt: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  createdAt: any;
   uid: string | null;
 }
 
 export default function AdminComplaintsPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
 
   const fetchComplaints = async () => {
     setLoading(true);
@@ -41,10 +45,6 @@ export default function AdminComplaintsPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this complaint?")) return;
@@ -116,8 +116,10 @@ export default function AdminComplaintsPage() {
                   {complaint.createdAt?.toDate ? formatDistanceToNow(complaint.createdAt.toDate(), { addSuffix: true }) : "Recently"}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800" onClick={() => window.open(`https://wa.me/${cleanPhoneForWhatsApp(complaint.phone)}`, '_blank', 'noopener,noreferrer')}>
-                    <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                  <Button variant="outline" size="sm" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800" asChild>
+                    <a href={`https://wa.me/${cleanPhoneForWhatsApp(complaint.phone)}`} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="w-4 h-4 mr-1" /> WhatsApp
+                    </a>
                   </Button>
                   <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(complaint.id)}>
                     <Trash2 className="w-4 h-4" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { collection, query, limit, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,18 +28,8 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch settings first (public, no auth required)
       try {
-        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
-        if (settingsSnap.exists()) {
-          setSettings(settingsSnap.data() as AppSettings);
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      }
-
-      // Fetch groups separately (requires auth, may fail for logged-out users)
-      try {
+        // Fetch groups
         const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(10));
         const querySnapshot = await getDocs(q);
         const fetchedGroups: any[] = [];
@@ -47,35 +37,29 @@ export default function Home() {
           fetchedGroups.push({ id: doc.id, ...doc.data() });
         });
         setGroups(fetchedGroups);
-      } catch (error) {
-        console.error("Error fetching groups:", error);
-      }
 
-      setLoading(false);
+        // Fetch settings
+        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
+        if (settingsSnap.exists()) {
+          setSettings(settingsSnap.data() as AppSettings);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
 
-  // Globally synchronized image rotation using Date.now()
-  // All users worldwide see the same image at the same time
-  const prevImageIdxRef = useRef(currentImageIdx);
+  // Image rotation with smooth transition
   useEffect(() => {
     if (settings?.heroImages && settings.heroImages.length > 1) {
-      const totalImages = settings.heroImages.length;
-      const ROTATION_INTERVAL_MS = 15000; // 15 seconds per image
-
-      const updateIndex = () => {
-        const globalIndex = Math.floor(Date.now() / ROTATION_INTERVAL_MS) % totalImages;
-        if (globalIndex !== prevImageIdxRef.current) {
-          prevImageIdxRef.current = globalIndex;
-          setImageLoaded(false);
-          setImageError(false);
-          setCurrentImageIdx(globalIndex);
-        }
-      };
-
-      updateIndex(); // Set correct image immediately on load
-      const interval = setInterval(updateIndex, 1000); // Check every second
+      const interval = setInterval(() => {
+        setImageLoaded(false); // Reset for next image
+        setImageError(false);
+        setCurrentImageIdx((prev) => (prev + 1) % settings.heroImages.length);
+      }, 15000);
       return () => clearInterval(interval);
     }
   }, [settings?.heroImages]);
@@ -115,7 +99,7 @@ export default function Home() {
               setImageLoaded(true);
             }}
             priority
-            unoptimized // Bypass Next.js image cache so rotation works in production
+            key={heroImageSrc} // Forces re-render on image change
             sizes="100vw"
           />
         </div>
