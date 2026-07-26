@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { collection, query, limit, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buttonVariants } from "@/components/ui/button";
@@ -52,14 +52,26 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Image rotation with smooth transition
+  // Globally synchronized image rotation using Date.now()
+  // All users worldwide see the same image at the same time
+  const prevImageIdxRef = useRef(currentImageIdx);
   useEffect(() => {
     if (settings?.heroImages && settings.heroImages.length > 1) {
-      const interval = setInterval(() => {
-        setImageLoaded(false); // Reset for next image
-        setImageError(false);
-        setCurrentImageIdx((prev) => (prev + 1) % settings.heroImages.length);
-      }, 15000);
+      const totalImages = settings.heroImages.length;
+      const ROTATION_INTERVAL_MS = 15000; // 15 seconds per image
+
+      const updateIndex = () => {
+        const globalIndex = Math.floor(Date.now() / ROTATION_INTERVAL_MS) % totalImages;
+        if (globalIndex !== prevImageIdxRef.current) {
+          prevImageIdxRef.current = globalIndex;
+          setImageLoaded(false);
+          setImageError(false);
+          setCurrentImageIdx(globalIndex);
+        }
+      };
+
+      updateIndex(); // Set correct image immediately on load
+      const interval = setInterval(updateIndex, 1000); // Check every second
       return () => clearInterval(interval);
     }
   }, [settings?.heroImages]);
@@ -99,7 +111,7 @@ export default function Home() {
               setImageLoaded(true);
             }}
             priority
-            key={heroImageSrc} // Forces re-render on image change
+            unoptimized // Bypass Next.js image cache so rotation works in production
             sizes="100vw"
           />
         </div>
