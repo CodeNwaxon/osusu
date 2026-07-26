@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "thumbs.dreamstime.com", // <-- ADD THIS
+        hostname: "firebasestorage.googleapis.com",
         port: "",
         pathname: "/**",
       },

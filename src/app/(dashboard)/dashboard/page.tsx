@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, getDocs, orderBy, collectionGroup } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote } from "lucide-react";
+import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote, Edit, Save } from "lucide-react";
+import { toast } from "sonner";
 
 interface GroupData {
   id: string;
@@ -31,6 +34,11 @@ export default function DashboardPage() {
   const [createdGroups, setCreatedGroups] = useState<GroupData[]>([]);
   const [joinedGroups, setJoinedGroups] = useState<GroupData[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -75,6 +83,17 @@ export default function DashboardPage() {
           }
         }
         setJoinedGroups(joined);
+
+        // Fetch User Profile
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setProfileName(userData.name || user.displayName || "");
+          setProfilePhone(userData.phone || "");
+        } else {
+          setProfileName(user.displayName || "");
+        }
+
       } catch (error) {
         console.error("Error fetching dashboard groups:", error);
       } finally {
@@ -84,6 +103,24 @@ export default function DashboardPage() {
 
     fetchGroups();
   }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        name: profileName,
+        phone: profilePhone,
+      });
+      toast.success("Profile updated successfully");
+      setIsEditingProfile(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   if (authLoading || (!user && !authLoading)) {
     return (
@@ -162,6 +199,54 @@ export default function DashboardPage() {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-8 md:py-12 space-y-12">
+        {/* Profile Section */}
+        <section>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>My Profile</CardTitle>
+                  <CardDescription>Update your personal information</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true)}
+                  disabled={savingProfile}
+                >
+                  {isEditingProfile ? (
+                    <><Save className="w-4 h-4 mr-2" /> {savingProfile ? "Saving..." : "Save"}</>
+                  ) : (
+                    <><Edit className="w-4 h-4 mr-2" /> Edit Profile</>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input 
+                    value={profileName} 
+                    onChange={(e) => setProfileName(e.target.value)} 
+                    disabled={!isEditingProfile} 
+                    placeholder="Enter your name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone Number</Label>
+                  <Input 
+                    value={profilePhone} 
+                    onChange={(e) => setProfilePhone(e.target.value)} 
+                    disabled={!isEditingProfile} 
+                    placeholder="e.g. 08012345678"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
