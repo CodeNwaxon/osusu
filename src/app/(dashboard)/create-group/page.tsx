@@ -174,7 +174,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("The name of your group contribution, e.g. Lagos Tech Bros Osusu")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -199,7 +199,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("This is the amount each member contributes per cycle")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -236,7 +236,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("The monthly deadline when members must pay the group administrator")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -259,7 +259,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("The monthly day when the selected member receives the gathered contribution payout")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -285,7 +285,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("The total number of months the savings cycle will run (each month corresponds to one payout)")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -307,7 +307,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("The expected number of members in this savings group")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -332,7 +332,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("Public groups are shown on the homepage. Private groups are only accessible via invitation link.")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -383,7 +383,7 @@ export default function CreateGroupPage() {
                           <button 
                             type="button" 
                             onClick={() => toast.info("Admin charge type deducted from the payout to maintain the group")} 
-                            className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                            className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                           >
                             !
                           </button>
@@ -415,7 +415,7 @@ export default function CreateGroupPage() {
                             <button 
                               type="button" 
                               onClick={() => toast.info(watchChargeType === "fixed" ? "Value of fixed charge (maximum ₦500)" : "Value of percentage charge (maximum 0.005 for 0.5%)")} 
-                              className="inline-flex items-center justify-center rounded-full w-4 h-4 bg-zinc-200 text-zinc-600 text-[10px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
+                              className="inline-flex items-center justify-center rounded-full w-3 h-3 bg-zinc-200 text-zinc-600 text-[8px] font-bold hover:bg-zinc-300 transition-colors cursor-pointer"
                             >
                               !
                             </button>
