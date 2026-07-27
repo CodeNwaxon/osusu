@@ -125,7 +125,7 @@ export function NotificationsMenu() {
                 )}
             </button>
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-background border border-border shadow-lg rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="fixed left-2 right-2 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 bg-background border border-border shadow-lg rounded-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
                         <h3 className="font-semibold text-sm">Notifications</h3>
                         {visibleNotifications.length > 0 && (
@@ -155,13 +155,29 @@ export function NotificationsMenu() {
                                             )}
 
                                             <div className="flex justify-between items-start gap-2">
-                                                <h4 className="font-medium text-sm text-foreground pr-6">{notif.title}</h4>
-                                                <button
-                                                    onClick={(e) => deleteNotification(e, notif.id)}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 text-destructive rounded absolute right-2 top-2"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
+                                                <h4 className="font-medium text-sm text-foreground pr-2 sm:pr-14">{notif.title}</h4>
+                                                {/* Desktop: hover-reveal buttons */}
+                                                <div className="hidden sm:flex absolute right-2 top-2 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {!isRead && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                markAsRead(notif.id);
+                                                            }}
+                                                            className="p-1 hover:bg-primary/10 text-primary rounded"
+                                                            title="Mark as read"
+                                                        >
+                                                            <Check className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => deleteNotification(e, notif.id)}
+                                                        className="p-1 hover:bg-destructive/10 text-destructive rounded"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <p className="text-xs text-muted-foreground mt-1 mb-2 leading-relaxed">
@@ -172,17 +188,41 @@ export function NotificationsMenu() {
                                                     <img src={notif.imageUrl} alt="Notification media" className="w-full h-auto object-cover max-h-32" />
                                                 </div>
                                             )}
-                                            {notif.link && (
-                                                <a
-                                                    href={notif.link}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="inline-flex items-center text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1.5 rounded-md mt-1 transition-colors"
-                                                >
-                                                    {notif.buttonText || "View Link"} <ExternalLink className="h-3 w-3 ml-1.5" />
-                                                </a>
-                                            )}
+                                            <div className="flex items-center justify-between mt-2">
+                                                {notif.link ? (
+                                                    <a
+                                                        href={notif.link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="inline-flex items-center text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors"
+                                                    >
+                                                        {notif.buttonText || "View Link"} <ExternalLink className="h-3 w-3 ml-1.5" />
+                                                    </a>
+                                                ) : <span />}
+                                                {/* Mobile: always-visible buttons */}
+                                                <div className="flex sm:hidden items-center gap-1">
+                                                    {!isRead && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                markAsRead(notif.id);
+                                                            }}
+                                                            className="p-1.5 bg-primary/10 text-primary rounded-md"
+                                                            title="Mark as read"
+                                                        >
+                                                            <Check className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={(e) => deleteNotification(e, notif.id)}
+                                                        className="p-1.5 bg-destructive/10 text-destructive rounded-md"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     );
                                 })}

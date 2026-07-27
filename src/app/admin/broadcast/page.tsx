@@ -37,9 +37,31 @@ export default function AdminBroadcastPage() {
   const [broadcasts, setBroadcasts] = useState<BroadcastRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
+  // Auto welcome message
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [savingWelcome, setSavingWelcome] = useState(false);
+
+  // Action state
+  const [pendingAction, setPendingAction] = useState<"send" | "delete" | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchBroadcasts();
+    fetchWelcomeMessage();
   }, []);
+
+  const fetchWelcomeMessage = async () => {
+    try {
+      const docSnap = await getDoc(doc(db, "settings", "global"));
+      if (docSnap.exists() && docSnap.data().autoWelcomeMessage) {
+        setWelcomeMessage(docSnap.data().autoWelcomeMessage);
+      } else {
+        setWelcomeMessage("Thanks for joining Osusu 9ja! Start by creating your own group or joining one with a referral link. Build trust, save together, and grow your wealth.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchBroadcasts = async () => {
     setLoadingHistory(true);
@@ -63,11 +85,12 @@ export default function AdminBroadcastPage() {
       toast.error("Title and message are required.");
       return;
     }
+    setPendingAction("send");
     setShowPasswordPrompt(true);
     setPasswordInput("");
   };
 
-  const confirmAndSend = async () => {
+  const confirmAction = async () => {
     // Verify CEO password
     try {
       const settingsDoc = await getDoc(doc(db, "settings", "global"));
@@ -76,7 +99,7 @@ export default function AdminBroadcastPage() {
         : "prince2020";
 
       if (passwordInput !== storedPassword) {
-        toast.error("Incorrect CEO password. Broadcast not sent.");
+        toast.error("Incorrect CEO password. Action not authorized.");
         return;
       }
     } catch (error) {
@@ -85,8 +108,17 @@ export default function AdminBroadcastPage() {
       return;
     }
 
-    setSending(true);
     setShowPasswordPrompt(false);
+
+    if (pendingAction === "send") {
+      await executeSend();
+    } else if (pendingAction === "delete" && pendingDeleteId) {
+      await executeDelete(pendingDeleteId);
+    }
+  };
+
+  const executeSend = async () => {
+    setSending(true);
 
     try {
       const broadcastData: Record<string, any> = {
@@ -132,8 +164,14 @@ export default function AdminBroadcastPage() {
     toast.info("Broadcast loaded into form. Edit and publish again.");
   };
 
-  const handleDeleteBroadcast = async (id: string) => {
-    if (!confirm("Delete this broadcast from history?")) return;
+  const handleDeleteClick = (id: string) => {
+    setPendingAction("delete");
+    setPendingDeleteId(id);
+    setShowPasswordPrompt(true);
+    setPasswordInput("");
+  };
+
+  const executeDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, "broadcasts", id));
       setBroadcasts(broadcasts.filter(b => b.id !== id));
@@ -141,6 +179,19 @@ export default function AdminBroadcastPage() {
     } catch (error) {
       console.error("Error deleting broadcast:", error);
       toast.error("Failed to delete broadcast.");
+    }
+  };
+
+  const handleSaveWelcome = async () => {
+    setSavingWelcome(true);
+    try {
+      const { setDoc } = await import("firebase/firestore");
+      await setDoc(doc(db, "settings", "global"), { autoWelcomeMessage: welcomeMessage.trim() }, { merge: true });
+      toast.success("Welcome message updated!");
+    } catch (error) {
+      toast.error("Failed to save welcome message");
+    } finally {
+      setSavingWelcome(false);
     }
   };
 
@@ -152,6 +203,24 @@ export default function AdminBroadcastPage() {
         </h1>
         <p className="text-muted-foreground mt-1">Send notifications to all users on the platform.</p>
       </div>
+
+      {/* Welcome Message Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Auto Welcome Message</CardTitle>
+          <CardDescription>Edit the welcome notification new users receive when they sign up.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <textarea
+            className="min-h-[80px] resize-none flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            value={welcomeMessage}
+            onChange={(e) => setWelcomeMessage(e.target.value)}
+          />
+          <Button onClick={handleSaveWelcome} disabled={savingWelcome} className="bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-white rounded-full">
+            {savingWelcome ? "Saving..." : "Update Message"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Compose Card */}
       <Card>
@@ -265,7 +334,7 @@ export default function AdminBroadcastPage() {
                       <Button variant="outline" size="sm" className="text-xs" onClick={() => handleReuse(b)}>
                         <RefreshCw className="w-3 h-3 mr-1" /> Reuse
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBroadcast(b.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteClick(b.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -298,7 +367,7 @@ export default function AdminBroadcastPage() {
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="pr-10"
-                onKeyDown={(e) => { if (e.key === "Enter") confirmAndSend(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") confirmAction(); }}
               />
               <button
                 type="button"
@@ -310,8 +379,8 @@ export default function AdminBroadcastPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <Button onClick={confirmAndSend} disabled={!passwordInput.trim()} className="w-full">
-                <Send className="w-4 h-4 mr-2" /> Confirm & Send
+              <Button onClick={confirmAction} disabled={!passwordInput.trim()} className="w-full">
+                <Send className="w-4 h-4 mr-2" /> {pendingAction === "delete" ? "Confirm Delete" : "Confirm & Send"}
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setShowPasswordPrompt(false)}>
                 Cancel

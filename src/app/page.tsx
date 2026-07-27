@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/store/useAuth";
-import { collection, query, limit, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, limit, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,33 +30,37 @@ export default function Home() {
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch groups
-        const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(20));
-        const querySnapshot = await getDocs(q);
-        const fetchedGroups: any[] = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          // Filter private groups client-side or check visibility
-          if (data.visibility !== "private") {
-            fetchedGroups.push({ id: doc.id, ...data });
-          }
-        });
-        setGroups(fetchedGroups.slice(0, 10));
+    // Real-time listener for groups
+    const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(20));
+    const unsubscribeGroups = onSnapshot(q, (querySnapshot) => {
+      const fetchedGroups: any[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (!data.isPrivate && data.visibility !== "private") {
+          fetchedGroups.push({ id: doc.id, ...data });
+        }
+      });
+      setGroups(fetchedGroups.slice(0, 10));
+    }, (error) => {
+      console.error("Error fetching groups real-time:", error);
+    });
 
-        // Fetch settings
+    const fetchSettings = async () => {
+      try {
         const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
         if (settingsSnap.exists()) {
           setSettings(settingsSnap.data() as AppSettings);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching settings:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+    fetchSettings();
+
+    return () => unsubscribeGroups();
   }, []);
 
   // Image rotation with smooth transition based on global time

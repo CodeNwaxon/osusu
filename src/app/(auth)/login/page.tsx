@@ -47,11 +47,22 @@ export default function LoginPage() {
           createdAt: serverTimestamp(),
         });
 
+        // Fetch dynamic welcome message
+        let welcomeText = "Thanks for joining Osusu 9ja! Start by creating your own group or joining one with a referral link. Build trust, save together, and grow your wealth.";
+        try {
+          const settingsDoc = await getDoc(doc(db, "settings", "global"));
+          if (settingsDoc.exists() && settingsDoc.data().autoWelcomeMessage) {
+            welcomeText = settingsDoc.data().autoWelcomeMessage;
+          }
+        } catch (err) {
+          console.error("Error fetching welcome message", err);
+        }
+
         // Send welcome notification
         await addDoc(collection(db, "notifications"), {
           userId: user.uid,
           title: "Welcome to Osusu 9ja! 🎉",
-          message: "Thanks for joining Osusu 9ja! Start by creating your own group or joining one with a referral link. Build trust, save together, and grow your wealth.",
+          message: welcomeText,
           link: "/create-group",
           buttonText: "Create a Group",
           createdAt: serverTimestamp(),

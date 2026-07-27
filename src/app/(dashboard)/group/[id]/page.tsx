@@ -64,6 +64,7 @@ interface GroupData {
   creatorId: string;
   refCode: string;
   status: string;
+  isPrivate?: boolean;
   osusuStarted?: boolean;
   osusuStartDate?: any;
 }
@@ -91,6 +92,7 @@ interface PayoutMonthData {
   userName: string;
   userEmail: string;
   amount: number;
+  isPaid?: boolean;
 }
 
 interface PaymentProof {
@@ -442,6 +444,77 @@ export default function GroupDetailPage() {
     }
   };
 
+  const handlePickMonth = async (monthNum: number) => {
+    if (!user || !group) return;
+    try {
+      await addDoc(collection(db, `groups/${group.id}/payoutMonths`), {
+        month: monthNum,
+        userId: user.uid,
+        userName: user.displayName || "User",
+        userEmail: user.email || "",
+        amount: group.amount,
+        assignedAt: serverTimestamp()
+      });
+      toast.success(`Successfully picked Month ${monthNum}`);
+    } catch (error) {
+      toast.error("Failed to pick month");
+    }
+  };
+
+  const handleDropMonth = async (assignmentId: string, monthNum: number) => {
+    if (!user || !group) return;
+    try {
+      await deleteDoc(doc(db, `groups/${group.id}/payoutMonths`, assignmentId));
+      toast.success(`Successfully dropped Month ${monthNum}`);
+    } catch (error) {
+      toast.error("Failed to drop month");
+    }
+  };
+
+  const handleMarkPaid = async (assignmentId: string, monthNum: number) => {
+    if (!user || !group) return;
+    try {
+      await updateDoc(doc(db, `groups/${group.id}/payoutMonths`, assignmentId), {
+        isPaid: true
+      });
+      toast.success(`Month ${monthNum} marked as paid`);
+    } catch (error) {
+      toast.error("Failed to mark month as paid");
+    }
+  };
+
+  const handleResetGroup = async () => {
+    if (!user || !group) return;
+    try {
+      setLoading(true);
+      // Delete messages
+      const messagesSnap = await getDocs(collection(db, `groups/${group.id}/messages`));
+      for (const m of messagesSnap.docs) {
+        await deleteDoc(m.ref);
+      }
+      // Delete proofs
+      const proofsSnap = await getDocs(collection(db, `groups/${group.id}/proofs`));
+      for (const p of proofsSnap.docs) {
+        await deleteDoc(p.ref);
+      }
+      // Delete payout months
+      const monthsSnap = await getDocs(collection(db, `groups/${group.id}/payoutMonths`));
+      for (const m of monthsSnap.docs) {
+        await deleteDoc(m.ref);
+      }
+      // Reset group start state
+      await updateDoc(doc(db, "groups", group.id), {
+        osusuStarted: false,
+        osusuStartDate: null
+      });
+      toast.success("Group has been reset for a new cycle");
+      setLoading(false);
+    } catch (error) {
+      toast.error("Failed to reset group");
+      setLoading(false);
+    }
+  };
+
   const formatTime = (timestamp: any) => {
     if (!timestamp?.toDate) return "";
     const date = timestamp.toDate();
@@ -556,7 +629,28 @@ export default function GroupDetailPage() {
 
   const allMonthsAssigned = payoutMonths.length === group.duration;
   const isGroupFull = members.length === group.totalMembers;
-  const showStartOsusuBtn = isCreator && isGroupFull && allMonthsAssigned && !group.osusuStarted;
+  const showStartOsusuBtn = isCreator && allMonthsAssigned && !group.osusuStarted;
+
+  const getPayoutDateForMonth = (monthNum: number) => {
+    if (!group.osusuStarted || !group.osusuStartDate) return null;
+    const startDate = group.osusuStartDate.toDate ? group.osusuStartDate.toDate() : new Date(group.osusuStartDate);
+    const payoutDate = new Date(startDate);
+    payoutDate.setMonth(startDate.getMonth() + (monthNum - 1));
+    payoutDate.setDate(group.payoutDay || 4);
+    return payoutDate;
+  };
+
+  let showResetBtn = false;
+  if (group.osusuStarted && group.osusuStartDate) {
+    const lastPayoutDate = getPayoutDateForMonth(group.duration);
+    if (lastPayoutDate) {
+      const resetThreshold = new Date(lastPayoutDate);
+      resetThreshold.setDate(resetThreshold.getDate() + 5);
+      if (now > resetThreshold) {
+        showResetBtn = true;
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -571,8 +665,11 @@ export default function GroupDetailPage() {
               >
                 <ArrowLeft className="h-3 w-3 md:h-4 md:w-4" />
               </Link>
-              <h1 className="text-lg md:text-xl font-bold text-foreground line-clamp-1 w-full">
+              <h1 className="text-lg md:text-xl font-bold text-foreground line-clamp-1 w-full flex items-center gap-2">
                 {group.name}
+                <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap pt-1">
+                  ({group.isPrivate ? "private" : "public"})
+                </span>
               </h1>
             </div>
             <div className="-mt-1.5 md:0 flex items-center flex-wrap gap-2 md:gap-3 pl-10 text-[10px] md:text-xs text-muted-foreground w-full">
@@ -681,20 +778,50 @@ export default function GroupDetailPage() {
               {Array.from({ length: group.duration }).map((_, idx) => {
                 const monthNum = idx + 1;
                 const assignment = payoutMonths.find(m => m.month === monthNum);
+                const payoutDate = getPayoutDateForMonth(monthNum);
+                
+                let showPaidBtn = false;
+                if (isCreator && group.osusuStarted && payoutDate) {
+                  const passed24h = new Date(payoutDate);
+                  passed24h.setHours(passed24h.getHours() + 24);
+                  if (now > passed24h && assignment && !assignment.isPaid) {
+                    showPaidBtn = true;
+                  }
+                }
+
+                const expectedTotal = group.amount * group.totalMembers;
 
                 return (
-                  <div key={monthNum} className="border-b border-border/40 pb-2 last:border-0 last:pb-0">
-                    <p className="text-xs font-semibold text-foreground">Month {monthNum}</p>
+                  <div key={monthNum} className={`border-b border-border/40 pb-2 last:border-0 last:pb-0 ${assignment?.isPaid ? "opacity-50 grayscale" : ""}`}>
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs font-semibold text-foreground">Month {monthNum}</p>
+                      {assignment?.isPaid && <Badge variant="outline" className="text-[9px] h-4">Paid</Badge>}
+                    </div>
                     {assignment ? (
-                      <div className="mt-1">
-                        <p className="text-xs font-medium text-primary">
-                          {assignment.userId === user?.uid ? user.displayName || assignment.userName : assignment.userName}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate">{assignment.userEmail}</p>
-                        <p className="text-[10px] font-bold text-foreground">₦{Number(assignment.amount).toLocaleString()}</p>
+                      <div className="mt-1 flex justify-between items-end">
+                        <div>
+                          <p className="text-xs font-medium text-primary">
+                            {assignment.userId === user?.uid ? user.displayName || assignment.userName : assignment.userName}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate">{assignment.userEmail}</p>
+                          <p className="text-[10px] font-bold text-foreground">₦{Number(expectedTotal).toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end">
+                          {assignment.userId === user?.uid && !group.osusuStarted && (
+                            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-destructive border-destructive hover:bg-destructive hover:text-white" onClick={() => handleDropMonth(assignment.id, monthNum)}>Drop</Button>
+                          )}
+                          {showPaidBtn && (
+                            <Button size="sm" className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkPaid(assignment.id, monthNum)}>Paid</Button>
+                          )}
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground mt-0.5">None</p>
+                      <div className="flex justify-between items-center mt-0.5">
+                        <p className="text-xs text-muted-foreground">None</p>
+                        {!group.osusuStarted && (
+                          <Button size="sm" className="h-6 text-[10px] px-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold" onClick={() => handlePickMonth(monthNum)}>Pick</Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -838,6 +965,11 @@ export default function GroupDetailPage() {
             {showStartOsusuBtn && (
               <Button onClick={handleStartOsusu} className="w-full bg-green-600 hover:bg-green-700 text-white rounded-full">
                 <Play className="h-4 w-4 mr-2" /> Start Osusu
+              </Button>
+            )}
+            {isCreator && showResetBtn && (
+              <Button onClick={handleResetGroup} className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-full">
+                <Calendar className="h-4 w-4 mr-2" /> Reset Group (New Cycle)
               </Button>
             )}
             {isCreator && (

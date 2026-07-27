@@ -137,7 +137,7 @@ export default function AdminManagementPage() {
     }
     setSavingPassword(true);
     try {
-      await updateDoc(doc(db, "settings", "global"), { ceoPassword: ceoPassword.trim() });
+      await setDoc(doc(db, "settings", "global"), { ceoPassword: ceoPassword.trim() }, { merge: true });
       toast.success("CEO password updated successfully");
     } catch (error) {
       console.error("Error saving CEO password:", error);

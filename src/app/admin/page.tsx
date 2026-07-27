@@ -2,7 +2,7 @@
 
 import { useAdmin } from "@/hooks/useAdmin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Settings, Phone, FileText, HelpCircle, Shield, BarChart3, ArrowRight } from "lucide-react";
+import { Users, Settings, Phone, FileText, HelpCircle, Shield, BarChart3, ArrowRight, Megaphone } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -60,6 +60,13 @@ export default function AdminDashboardPage() {
       description: "Edit the platform's Terms of Service.",
       icon: <FileText className="w-8 h-8 text-purple-500" />,
       allowed: isCEO || adminRoutes.includes("/admin/terms") || adminRoutes.includes("*")
+    },
+    {
+      href: "/admin/broadcast",
+      title: "Broadcasts",
+      description: "Send and manage platform-wide notifications.",
+      icon: <Megaphone className="w-8 h-8 text-yellow-500" />,
+      allowed: isCEO || adminRoutes.includes("/admin/broadcast") || adminRoutes.includes("*")
     },
     {
       href: "/admin/about",

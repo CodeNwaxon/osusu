@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote } from "lucide-react";
+import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote, Lock, Globe } from "lucide-react";
 import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
 
 interface GroupData {
@@ -24,6 +25,7 @@ interface GroupData {
   creatorId: string;
   refCode: string;
   status: string;
+  isPrivate?: boolean;
 }
 
 export default function DashboardPage() {
@@ -265,9 +267,30 @@ export default function DashboardPage() {
 }
 
 function GroupCard({ group, role }: { group: GroupData; role: "creator" | "member" }) {
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleTogglePrivacy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (role !== "creator") return;
+    
+    setIsToggling(true);
+    try {
+      await updateDoc(doc(db, "groups", group.id), {
+        isPrivate: !group.isPrivate
+      });
+      toast.success(`Group is now ${!group.isPrivate ? "Private" : "Public"}`);
+    } catch (error) {
+      console.error("Failed to toggle privacy", error);
+      toast.error("Failed to update group privacy");
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
-    <Card className="overflow-hidden border-border/30 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group/card">
-      <CardHeader className="bg-muted/30 pb-4">
+    <Card className="overflow-hidden border-border/30 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group/card flex flex-col h-full">
+      <CardHeader className="bg-muted/30 pb-4 shrink-0">
         <div className="flex justify-between items-start gap-2">
           <CardTitle className="text-lg line-clamp-1">{group.name}</CardTitle>
           <Badge
@@ -284,11 +307,20 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
             )}
           </Badge>
         </div>
-        <CardDescription className="text-muted-foreground text-xs">
-          {group.duration} Months · Payout on {group.payoutDay}th
+        <CardDescription className="text-muted-foreground text-xs flex justify-between items-center">
+          <span>{group.duration} Months · Payout on {group.payoutDay}th</span>
+          {group.isPrivate ? (
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-500 font-medium">
+              <Lock className="h-3 w-3" /> Private
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-green-600 dark:text-green-500 font-medium">
+              <Globe className="h-3 w-3" /> Public
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-5">
+      <CardContent className="pt-5 grow">
         <div className="flex justify-between items-center mb-3">
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Banknote className="h-3.5 w-3.5" /> Contribution
@@ -314,7 +346,7 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
           <span className="text-sm font-medium">/ {group.totalMembers}</span>
         </div>
       </CardContent>
-      <CardFooter className="pt-0">
+      <CardFooter className="pt-0 flex flex-col gap-2 shrink-0">
         <Link
           href={`/group/${group.id}`}
           className={buttonVariants({
@@ -325,6 +357,19 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
           Open Group
           <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
+        {role === "creator" && (
+          <button
+            onClick={handleTogglePrivacy}
+            disabled={isToggling}
+            className="w-full text-xs font-medium py-1.5 rounded-full border border-border/50 text-muted-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+          >
+            {group.isPrivate ? (
+              <><Globe className="h-3.5 w-3.5" /> Make Public</>
+            ) : (
+              <><Lock className="h-3.5 w-3.5" /> Make Private</>
+            )}
+          </button>
+        )}
       </CardFooter>
     </Card>
   );
