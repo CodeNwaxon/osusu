@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Settings, Shield, Search } from "lucide-react";
+import { Users, Settings, Shield, Search, MessageSquare } from "lucide-react";
 
 interface UserData {
   uid: string;
@@ -46,6 +46,7 @@ export default function StatisticsPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalReviews, setTotalReviews] = useState(0);
 
   // Settings state
   const [settings, setSettings] = useState<GlobalSettings>({
@@ -82,8 +83,18 @@ export default function StatisticsPage() {
       }
     };
 
+    const fetchReviewsCount = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "reviews"));
+        setTotalReviews(querySnapshot.size);
+      } catch (error) {
+        console.error("Error fetching reviews count:", error);
+      }
+    };
+
     fetchUsers();
     fetchSettings();
+    fetchReviewsCount();
   }, []);
 
   const handleSaveSettings = async () => {
@@ -128,6 +139,17 @@ export default function StatisticsPage() {
                 <p className="text-3xl font-bold text-foreground mt-1">{users.length}</p>
               </div>
               <Users className="h-8 w-8 text-primary/40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Reviews</p>
+                <p className="text-3xl font-bold text-foreground mt-1">{totalReviews}</p>
+              </div>
+              <MessageSquare className="h-8 w-8 text-blue-400/40" />
             </div>
           </CardContent>
         </Card>

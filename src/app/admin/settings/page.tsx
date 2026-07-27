@@ -84,11 +84,6 @@ export default function SettingsCMSPage() {
     }
   };
 
-  const loadMockData = () => {
-    setSettings(DEFAULT_MOCK_DATA);
-    toast.info("Mock data loaded. Click Save to persist.");
-  };
-
   const handleAddImage = () => {
     if (settings.heroImages.length >= 10) {
       toast.error("Maximum 10 hero images allowed");
@@ -123,9 +118,6 @@ export default function SettingsCMSPage() {
           <p className="text-muted-foreground mt-1">Manage public site content and details.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadMockData}>
-            <Database className="w-4 h-4 mr-2" /> Load Mock Data
-          </Button>
           <Button onClick={handleSave} disabled={saving}>
             <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Settings"}
           </Button>

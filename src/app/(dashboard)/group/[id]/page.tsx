@@ -42,7 +42,8 @@ import {
   Play,
   Upload,
   Image as ImageIcon,
-  AlertTriangle
+  AlertTriangle,
+  UserMinus
 } from "lucide-react";
 import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
 import { toast } from "sonner";
@@ -117,7 +118,7 @@ export default function GroupDetailPage() {
   const [proofImageFile, setProofImageFile] = useState<File | null>(null);
 
   // Custom confirmation modal states
-  const [confirmActionType, setConfirmActionType] = useState<"delete" | "exit" | "delete_proof" | null>(null);
+  const [confirmActionType, setConfirmActionType] = useState<"delete" | "exit" | "delete_proof" | "kick_out" | null>(null);
   const [confirmExpectedCode, setConfirmExpectedCode] = useState("");
   const [confirmInputCode, setConfirmInputCode] = useState("");
   const [confirmTargetId, setConfirmTargetId] = useState<string | null>(null);
@@ -271,7 +272,7 @@ export default function GroupDetailPage() {
     }
   };
 
-  const initiateConfirm = (type: "delete" | "exit" | "delete_proof", targetId?: string) => {
+  const initiateConfirm = (type: "delete" | "exit" | "delete_proof" | "kick_out", targetId?: string) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setConfirmExpectedCode(code);
     setConfirmActionType(type);
@@ -296,6 +297,8 @@ export default function GroupDetailPage() {
       executeExitGroup();
     } else if (type === "delete_proof" && target) {
       executeDeleteProof(target);
+    } else if (type === "kick_out" && target) {
+      executeKickOut(target);
     }
   };
 
@@ -355,6 +358,29 @@ export default function GroupDetailPage() {
     }
   };
 
+  const executeKickOut = async (memberId: string) => {
+    try {
+      setLoading(true);
+      // Find member doc
+      const memberQuery = query(collection(db, `groups/${id}/members`), where("userId", "==", memberId));
+      const memberSnap = await getDocs(memberQuery);
+      for (const m of memberSnap.docs) {
+        await deleteDoc(m.ref);
+      }
+      // Remove selected payout months for this member
+      const monthsQuery = query(collection(db, `groups/${id}/payoutMonths`), where("userId", "==", memberId));
+      const monthsSnap = await getDocs(monthsQuery);
+      for (const m of monthsSnap.docs) {
+        await deleteDoc(m.ref);
+      }
+      toast.success("Member removed from group successfully");
+      setLoading(false);
+    } catch (error) {
+      toast.error("Failed to remove member");
+      setLoading(false);
+    }
+  };
+
   const handleStartOsusu = async () => {
     if (!group) return;
     try {
@@ -372,14 +398,22 @@ export default function GroupDetailPage() {
     if (!proofImageFile || !user || !id) return;
     setUploadingProof(true);
     try {
-      const fileRef = ref(storage, `payment_proofs/${id}/${Date.now()}_${proofImageFile.name}`);
-      await uploadBytes(fileRef, proofImageFile);
-      const url = await getDownloadURL(fileRef);
+      const formData = new FormData();
+      formData.append("file", proofImageFile);
+      
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) throw new Error("Failed to upload image");
+      
+      const data = await response.json();
 
       await addDoc(collection(db, `groups/${id}/proofs`), {
         userId: user.uid,
         userName: user.displayName || "Anonymous",
-        imageUrl: url,
+        imageUrl: data.url,
         createdAt: serverTimestamp(),
       });
       toast.success("Proof of payment uploaded successfully!");
@@ -705,6 +739,17 @@ export default function GroupDetailPage() {
                         {member.email || "No email"}
                       </p>
                     </div>
+                    {isCreator && member.userId !== group.creatorId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => initiateConfirm("kick_out", member.userId)}
+                        title="Kick Out Member"
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -970,6 +1015,7 @@ export default function GroupDetailPage() {
                 {confirmActionType === "delete" && "Are you absolutely sure you want to permanently delete this group? This action cannot be undone."}
                 {confirmActionType === "exit" && "Are you sure you want to exit this group? You will lose access to all chats and records."}
                 {confirmActionType === "delete_proof" && "Are you sure you want to delete this payment proof?"}
+                {confirmActionType === "kick_out" && "Are you sure you want to kick out this member from the group? They will lose all access."}
               </p>
             </div>
 

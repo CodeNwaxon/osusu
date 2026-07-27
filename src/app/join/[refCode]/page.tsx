@@ -215,7 +215,7 @@ export default function JoinGroupPage() {
       {/* Trust Warning Modal */}
       {showTrustModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6">
+          <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-destructive">Wait! Read This</h2>
             <p className="text-lg">
               You will pay money <strong>directly</strong> to the admin's bank account. This app does <strong>NOT</strong> hold funds.
@@ -223,12 +223,12 @@ export default function JoinGroupPage() {
             <p className="text-muted-foreground">
               Do you trust this person? By continuing, you acknowledge the risk.
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="outline" className="w-full" onClick={() => setShowTrustModal(false)}>
                 Cancel
               </Button>
               <Button variant="destructive" className="w-full" onClick={confirmTrust}>
-                I Understand
+                I Understand & Join
               </Button>
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function JoinGroupPage() {
       {/* Month Selection Modal */}
       {showMonthModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6">
+          <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6 max-h-[90vh] overflow-y-auto">
             <div>
               <h2 className="text-xl font-bold">Select Payout Month(s)</h2>
               <p className="text-xs text-muted-foreground mt-1">Choose which month(s) you wish to receive the payout.</p>
@@ -284,12 +284,12 @@ export default function JoinGroupPage() {
               </div>
             )}
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="outline" className="w-full" onClick={() => setShowMonthModal(false)}>
                 Cancel
               </Button>
               <Button className="w-full bg-primary hover:bg-primary/95 text-white" onClick={confirmJoin} disabled={joining || selectedMonths.length === 0}>
-                {joining ? "Joining..." : "Proceed"}
+                {joining ? "Joining..." : "Join Group Now"}
               </Button>
             </div>
           </div>

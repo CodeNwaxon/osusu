@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,9 +62,18 @@ export default function AdminAboutPage() {
       let finalImageUrl = settings.ceoImageUrl;
 
       if (imageFile) {
-        const fileRef = ref(storage, `ceo_images/${Date.now()}_${imageFile.name}`);
-        await uploadBytes(fileRef, imageFile);
-        finalImageUrl = await getDownloadURL(fileRef);
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) throw new Error("Failed to upload image");
+        
+        const data = await response.json();
+        finalImageUrl = data.url;
       }
 
       await setDoc(doc(db, "about", "latest"), {
@@ -146,7 +154,7 @@ export default function AdminAboutPage() {
                   onChange={e => setSettings({ ...settings, companyLink: e.target.value })} 
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-2 border border-border p-4 rounded-xl my-4 bg-muted/20">
                 <Label>CEO Image (URL or Upload)</Label>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Input 
@@ -172,17 +180,17 @@ export default function AdminAboutPage() {
                           setPreviewUrl(URL.createObjectURL(file));
                         }
                       }}
-                      className="flex-1"
+                      className="flex-1 cursor-pointer"
                     />
                   </div>
                 </div>
                 {(previewUrl || settings.ceoImageUrl) && (
-                  <div className="mt-2">
-                    <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Preview:</p>
                     <img 
                       src={previewUrl || settings.ceoImageUrl} 
                       alt="CEO Preview" 
-                      className="w-40 h-40 object-cover rounded-xl border border-border" 
+                      className="w-40 h-40 object-cover rounded-xl border-2 border-primary/20 shadow-sm" 
                     />
                   </div>
                 )}

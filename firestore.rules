@@ -102,6 +102,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Reviews Collection
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
     // Default fallback (block everything else)
     match /{document=**} {
       allow read, write: if false;
