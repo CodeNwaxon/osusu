@@ -45,25 +45,31 @@ export default function DashboardPage() {
     // Listen to groups created by this user
     const createdQuery = query(
       collection(db, "groups"),
-      where("creatorId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      where("creatorId", "==", user.uid)
     );
     const unsubCreated = onSnapshot(createdQuery, (createdSnap) => {
       const created: GroupData[] = [];
       createdSnap.forEach((doc) => {
         created.push({ id: doc.id, ...doc.data() } as GroupData);
       });
+      // Sort by createdAt descending on the client side
+      created.sort((a, b) => {
+        const dateA = (a as any).createdAt?.toMillis?.() || 0;
+        const dateB = (b as any).createdAt?.toMillis?.() || 0;
+        return dateB - dateA;
+      });
       setCreatedGroups(created);
       setLoading(false);
     }, (error) => {
       console.error("Error watching created groups:", error);
+      setLoading(false);
     });
 
     // Listen to all groups and check membership in real-time
     const allGroupsQuery = collection(db, "groups");
     const unsubJoined = onSnapshot(allGroupsQuery, async (allGroupsSnap) => {
       const joined: GroupData[] = [];
-      
+
       // We will perform a snapshot listen for members on each group to ensure real-time update
       for (const groupDoc of allGroupsSnap.docs) {
         const data = groupDoc.data();
@@ -107,9 +113,17 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 md:px-6 py-8 md:py-12 relative z-10">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg shadow-primary/20">
-                <LayoutDashboard className="h-7 w-7 text-white" />
-              </div>
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || "User Avatar"}
+                  className="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-primary/20 shrink-0 border-2 border-orange-500"
+                />
+              ) : (
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+                  <LayoutDashboard className="h-7 w-7 text-white" />
+                </div>
+              )}
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                   Welcome back, {user?.displayName?.split(" ")[0] || "User"}

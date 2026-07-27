@@ -24,6 +24,7 @@ export default function JoinGroupPage() {
   const [isMember, setIsMember] = useState(false);
   const [occupiedMonths, setOccupiedMonths] = useState<number[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const [hasMonthAssigned, setHasMonthAssigned] = useState(false);
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -50,10 +51,16 @@ export default function JoinGroupPage() {
           const monthsQuery = collection(db, `groups/${groupData.id}/payoutMonths`);
           const monthsSnap = await getDocs(monthsQuery);
           const occupied: number[] = [];
+          let userHasMonth = false;
           monthsSnap.forEach((doc) => {
-            occupied.push(doc.data().month);
+            const data = doc.data();
+            occupied.push(data.month);
+            if (user && data.userId === user.uid) {
+              userHasMonth = true;
+            }
           });
           setOccupiedMonths(occupied);
+          setHasMonthAssigned(userHasMonth);
         } else {
           toast.error("Group not found");
         }
@@ -73,7 +80,11 @@ export default function JoinGroupPage() {
       return;
     }
     if (isMember) {
-      router.push(`/group/${group.id}`);
+      if (!hasMonthAssigned) {
+        setShowMonthModal(true);
+      } else {
+        router.push(`/group/${group.id}`);
+      }
       return;
     }
     setShowTrustModal(true);
@@ -100,24 +111,28 @@ export default function JoinGroupPage() {
 
     setJoining(true);
     try {
-      // Final race condition membership check
-      const memberQuery = query(
-        collection(db, `groups/${group.id}/members`),
-        where("userId", "==", user!.uid)
-      );
-      const memberSnap = await getDocs(memberQuery);
-      if (!memberSnap.empty) {
-        toast.error("You are already a member of this group");
-        router.push(`/group/${group.id}`);
-        return;
-      }
+      if (!isMember) {
+        // Final race condition membership check
+        const memberQuery = query(
+          collection(db, `groups/${group.id}/members`),
+          where("userId", "==", user!.uid)
+        );
+        const memberSnap = await getDocs(memberQuery);
+        if (!memberSnap.empty && hasMonthAssigned) {
+          toast.error("You are already a member of this group");
+          router.push(`/group/${group.id}`);
+          return;
+        }
 
-      // Add membership
-      await addDoc(collection(db, `groups/${group.id}/members`), {
-        userId: user!.uid,
-        joinedAt: serverTimestamp(),
-        paymentStatus: "pending"
-      });
+        if (memberSnap.empty) {
+          // Add membership
+          await addDoc(collection(db, `groups/${group.id}/members`), {
+            userId: user!.uid,
+            joinedAt: serverTimestamp(),
+            paymentStatus: "pending"
+          });
+        }
+      }
 
       // Save month selection
       for (const m of selectedMonths) {
@@ -131,7 +146,7 @@ export default function JoinGroupPage() {
         });
       }
 
-      toast.success("Successfully joined the group!");
+      toast.success(isMember ? "Successfully selected month(s)!" : "Successfully joined the group!");
       router.push(`/group/${group.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to join group");

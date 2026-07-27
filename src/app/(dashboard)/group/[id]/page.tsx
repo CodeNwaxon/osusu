@@ -182,7 +182,7 @@ export default function GroupDetailPage() {
       // Check for Dec 31 cleanup
       const now = new Date();
       const isDec31 = now.getMonth() === 11 && now.getDate() === 31;
-      
+
       if (isDec31 && !snapshot.empty) {
         // Run cleanup
         const batch = writeBatch(db);
@@ -427,43 +427,40 @@ export default function GroupDetailPage() {
       {/* Group Header */}
       <div className="border-b border-border/40 bg-card/80 backdrop-blur-sm sticky top-16 z-40">
         <div className="container mx-auto px-4 md:px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex items-center gap-2 w-full">
               <Link
                 href="/dashboard"
-                className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted transition-colors"
+                className="h-8 w-8 shrink-0 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Link>
-              <div>
-                <h1 className="text-lg md:text-xl font-bold text-foreground line-clamp-1">
-                  {group.name}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {members.length} member{members.length !== 1 ? "s" : ""} ·{" "}
-                  {group.duration} months
-                </p>
-              </div>
+              <h1 className="text-lg md:text-xl font-bold text-foreground line-clamp-1 w-full">
+                {group.name}
+              </h1>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full text-xs"
-                onClick={() => setShowShareModal(true)}
-              >
-                <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                Share
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full text-xs"
-                onClick={() => setShowMembers(!showMembers)}
-              >
-                <Users className="h-3.5 w-3.5 mr-1.5" />
-                Group Info
-              </Button>
+            <div className="-mt-3 md:0 flex items-center flex-wrap gap-2 md:gap-3 pl-10 text-[10px] md:text-xs text-muted-foreground w-full">
+              <span>{members.length} member{members.length !== 1 ? "s" : ""} · {group.duration} months</span>
+              <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-[10px] md:text-xs h-7 md:h-8 px-2 md:px-3"
+                  onClick={() => setShowShareModal(true)}
+                >
+                  <Share2 className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1" />
+                  Share
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-[10px] md:text-xs h-7 md:h-8 px-2 md:px-3"
+                  onClick={() => setShowMembers(!showMembers)}
+                >
+                  <Users className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1" />
+                  Group Info
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -555,7 +552,7 @@ export default function GroupDetailPage() {
                     {assignment ? (
                       <div className="mt-1">
                         <p className="text-xs font-medium text-primary">
-                          {assignment.userId === user?.uid ? user.displayName?.split(" ")[0] : assignment.userName.split(" ")[0]}
+                          {assignment.userId === user?.uid ? user.displayName || assignment.userName : assignment.userName}
                         </p>
                         <p className="text-[10px] text-muted-foreground truncate">{assignment.userEmail}</p>
                         <p className="text-[10px] font-bold text-foreground">₦{Number(assignment.amount).toLocaleString()}</p>
@@ -583,9 +580,9 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="pt-3 pb-2">
               <div className="space-y-1">
-                {members.map((member) => (
+                {members.map((member, index) => (
                   <div
-                    key={member.userId}
+                    key={`member-${member.userId}-${index}`}
                     className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     {member.photoURL ? (
@@ -710,7 +707,7 @@ export default function GroupDetailPage() {
                             {!isMe && (
                               <div className="flex items-center gap-1.5 mb-1 ml-1">
                                 <span className="text-xs font-semibold text-foreground">
-                                  {msg.senderName}
+                                  {msg.senderName.split(" ")[0]}
                                 </span>
                                 <span className="text-[10px] text-muted-foreground">
                                   · {msg.senderEmail}
@@ -728,7 +725,7 @@ export default function GroupDetailPage() {
                               <p className="leading-relaxed break-words pr-6">
                                 {msg.text}
                               </p>
-                              
+
                               {isMe && (
                                 <button
                                   onClick={() => handleDeleteMessage(msg.id)}
@@ -793,7 +790,7 @@ export default function GroupDetailPage() {
               <h2 className="text-xl font-bold">Share Group Invitation</h2>
               <p className="text-xs text-muted-foreground mt-1">Invite others to join this Osusu group.</p>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" className="w-full text-xs font-semibold" onClick={shareViaWhatsApp}>WhatsApp</Button>
               <Button variant="outline" className="w-full text-xs font-semibold" onClick={shareViaFacebook}>Facebook</Button>
@@ -804,7 +801,7 @@ export default function GroupDetailPage() {
             <Button className="w-full bg-primary text-white hover:bg-primary/95" onClick={triggerNativeShare}>
               Copy Link / Native Share
             </Button>
-            
+
             <Button variant="outline" className="w-full" onClick={() => setShowShareModal(false)}>
               Close
             </Button>
