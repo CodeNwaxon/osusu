@@ -521,20 +521,20 @@ export default function GroupDetailPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Group Header */}
       <div className="border-b border-border/40 bg-card/80 backdrop-blur-sm sticky top-16 z-40">
-        <div className="container mx-auto px-4 md:px-6 py-3">
+        <div className="container mx-auto px-4 md:px-6 py-2 md:py-3">
           <div className="flex flex-col gap-1 w-full">
             <div className="flex items-center gap-2 w-full">
               <Link
                 href="/dashboard"
-                className="h-8 w-8 shrink-0 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted transition-colors"
+                className="h-6 w-6 md:h-8 md:w-8 shrink-0 rounded-full border border-border/60 flex items-center justify-center hover:bg-muted transition-colors"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3 w-3 md:h-4 md:w-4" />
               </Link>
               <h1 className="text-lg md:text-xl font-bold text-foreground line-clamp-1 w-full">
                 {group.name}
               </h1>
             </div>
-            <div className="-mt-3 md:0 flex items-center flex-wrap gap-2 md:gap-3 pl-10 text-[10px] md:text-xs text-muted-foreground w-full">
+            <div className="-mt-1.5 md:0 flex items-center flex-wrap gap-2 md:gap-3 pl-10 text-[10px] md:text-xs text-muted-foreground w-full">
               <span>{members.length} member{members.length !== 1 ? "s" : ""} · {group.duration} months</span>
               <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
                 <Button
