@@ -18,7 +18,9 @@ export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const helpRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -29,6 +31,9 @@ export function Navbar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (helpRef.current && !helpRef.current.contains(event.target as Node)) {
         setHelpOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -92,7 +97,25 @@ export function Navbar() {
               {user.photoURL && (
                 <img src={user.photoURL} alt="Profile" className="h-8 w-8 rounded-full ring-2 ring-primary/20" />
               )}
-              <span className="text-sm font-medium hidden lg:inline">{user.displayName}</span>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="text-sm font-medium hidden lg:inline cursor-pointer hover:text-primary transition-colors"
+                >
+                  {user.displayName}
+                </button>
+                {userMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-44 bg-background border border-border rounded-md shadow-md py-1 animate-in fade-in zoom-in-95 z-50">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted transition-colors"
+                    >
+                      <LayoutDashboard className="w-4 h-4" /> Dashboard
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Button variant="ghost" size="icon" onClick={handleLogout} className="rounded-full">
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -171,6 +194,9 @@ export function Navbar() {
             // Regular Mobile Menu
             <>
               <Link href="/" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><Home className="w-4 h-4" /> Home</Link>
+              {user && (
+                <Link href="/dashboard" className="flex items-center gap-2 text-sm font-medium py-2 text-primary" onClick={() => setMobileOpen(false)}><LayoutDashboard className="w-4 h-4" /> Dashboard</Link>
+              )}
               <Link href="/create-group" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><PlusCircle className="w-4 h-4" /> Create Group</Link>
               <Link href="/faq" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> FAQ</Link>
               <Link href="/about" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}><FileText className="w-4 h-4" /> About Us</Link>

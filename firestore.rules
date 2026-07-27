@@ -56,6 +56,11 @@ service cloud.firestore {
         allow write: if isAuthenticated();
       }
 
+      // Proof of Payment Subcollection
+      match /proofs/{proofId} {
+        allow read, write: if isAuthenticated();
+      }
+
       // Activities Subcollection
       match /activities/{activityId} {
         allow read: if isAuthenticated();

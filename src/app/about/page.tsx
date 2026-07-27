@@ -53,15 +53,44 @@ export default function AboutPage() {
           <div className="text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap">
             {settings.aboutContent}
           </div>
+
+          {/* CEO Message Section */}
+          {settings.ceoMessage && (
+            <div className="mt-8">
+              <h2 className="text-2xl font-semibold mb-4">Message from the CEO</h2>
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-orange-500/5">
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap italic">
+                    &ldquo;{settings.ceoMessage}&rdquo;
+                  </p>
+                  <p className="text-sm font-semibold text-primary mt-4">— {settings.ceoName || "CEO"}</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
-              <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-primary/20 text-primary rounded-full mx-auto flex items-center justify-center text-2xl font-bold mb-3">
-                  {settings.ceoName.charAt(0)}
-                </div>
+          <Card className="border-primary/20 bg-primary/5 overflow-hidden">
+            {/* CEO Image */}
+            {settings.ceoImageUrl ? (
+              <div className="w-full aspect-[4/3] overflow-hidden">
+                <img
+                  src={settings.ceoImageUrl}
+                  alt={settings.ceoName || "CEO"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-full aspect-[4/3] bg-primary/10 flex items-center justify-center">
+                <span className="text-5xl font-bold text-primary/40">
+                  {settings.ceoName ? settings.ceoName.charAt(0) : "?"}
+                </span>
+              </div>
+            )}
+
+            <CardContent className="pt-4">
+              <div className="text-center mb-4">
                 <h3 className="font-bold text-lg">{settings.ceoName}</h3>
                 <p className="text-sm text-primary font-medium">CEO & Founder</p>
                 <div className="mt-2 text-xs text-muted-foreground">
@@ -73,7 +102,7 @@ export default function AboutPage() {
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-3 pt-4 border-t border-primary/10">
                 <div className="flex items-center gap-3 text-sm">
                   <Mail className="w-4 h-4 text-muted-foreground shrink-0" />

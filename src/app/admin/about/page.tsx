@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ export interface AboutSettings {
   ceoName: string;
   ceoEmail: string;
   ceoPhone: string;
+  ceoImageUrl: string;
   companySubtext: string;
   companyLink: string;
   aboutContent: string;
@@ -25,6 +27,7 @@ export default function AdminAboutPage() {
     ceoName: "",
     ceoEmail: "",
     ceoPhone: "",
+    ceoImageUrl: "",
     companySubtext: "",
     companyLink: "",
     aboutContent: "",
@@ -32,6 +35,8 @@ export default function AdminAboutPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAboutSettings();
@@ -55,8 +60,17 @@ export default function AdminAboutPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      let finalImageUrl = settings.ceoImageUrl;
+
+      if (imageFile) {
+        const fileRef = ref(storage, `ceo_images/${Date.now()}_${imageFile.name}`);
+        await uploadBytes(fileRef, imageFile);
+        finalImageUrl = await getDownloadURL(fileRef);
+      }
+
       await setDoc(doc(db, "about", "latest"), {
         ...settings,
+        ceoImageUrl: finalImageUrl,
         updatedAt: new Date().toISOString()
       });
       toast.success("About page settings saved successfully");
@@ -131,6 +145,47 @@ export default function AdminAboutPage() {
                   value={settings.companyLink} 
                   onChange={e => setSettings({ ...settings, companyLink: e.target.value })} 
                 />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>CEO Image (URL or Upload)</Label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input 
+                    type="url"
+                    placeholder="https://example.com/ceo-photo.jpg"
+                    value={settings.ceoImageUrl} 
+                    onChange={e => {
+                      setSettings({ ...settings, ceoImageUrl: e.target.value });
+                      setImageFile(null);
+                      setPreviewUrl(null);
+                    }} 
+                    className="flex-1"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">OR</span>
+                    <Input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          setImageFile(file);
+                          setPreviewUrl(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                {(previewUrl || settings.ceoImageUrl) && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                    <img 
+                      src={previewUrl || settings.ceoImageUrl} 
+                      alt="CEO Preview" 
+                      className="w-40 h-40 object-cover rounded-xl border border-border" 
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div className="space-y-2">

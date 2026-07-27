@@ -17,7 +17,8 @@ import {
   where,
   writeBatch
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,10 @@ import {
   Trash2,
   LogOut,
   Bell,
-  Play
+  Play,
+  Upload,
+  Image as ImageIcon,
+  AlertTriangle
 } from "lucide-react";
 import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
 import { toast } from "sonner";
@@ -85,6 +89,14 @@ interface PayoutMonthData {
   amount: number;
 }
 
+interface PaymentProof {
+  id: string;
+  userId: string;
+  userName: string;
+  imageUrl: string;
+  createdAt: any;
+}
+
 export default function GroupDetailPage() {
   const { id } = useParams();
   const { user, loading: authLoading } = useAuth();
@@ -99,6 +111,16 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showMembers, setShowMembers] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
+  const [proofs, setProofs] = useState<PaymentProof[]>([]);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [proofImageFile, setProofImageFile] = useState<File | null>(null);
+
+  // Custom confirmation modal states
+  const [confirmActionType, setConfirmActionType] = useState<"delete" | "exit" | "delete_proof" | null>(null);
+  const [confirmExpectedCode, setConfirmExpectedCode] = useState("");
+  const [confirmInputCode, setConfirmInputCode] = useState("");
+  const [confirmTargetId, setConfirmTargetId] = useState<string | null>(null);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -169,6 +191,20 @@ export default function GroupDetailPage() {
     return () => unsubMonths();
   }, [id, user]);
 
+  // Real-time proofs listener
+  useEffect(() => {
+    if (!id || !user) return;
+    const proofsQuery = query(collection(db, `groups/${id}/proofs`), orderBy("createdAt", "desc"));
+    const unsubProofs = onSnapshot(proofsQuery, (snapshot) => {
+      const list: PaymentProof[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() } as PaymentProof);
+      });
+      setProofs(list);
+    });
+    return () => unsubProofs();
+  }, [id, user]);
+
   // Real-time chat listener with auto year-end cleanup
   useEffect(() => {
     if (!id || !user) return;
@@ -235,8 +271,35 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleDeleteGroup = async () => {
-    if (!confirm("Are you absolutely sure you want to permanently delete this group? This will wipe all chats, members, and payment history!")) return;
+  const initiateConfirm = (type: "delete" | "exit" | "delete_proof", targetId?: string) => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setConfirmExpectedCode(code);
+    setConfirmActionType(type);
+    setConfirmInputCode("");
+    if (targetId) setConfirmTargetId(targetId);
+  };
+
+  const executeConfirmedAction = () => {
+    if (confirmInputCode !== confirmExpectedCode) {
+      toast.error("Incorrect confirmation code.");
+      return;
+    }
+    
+    const type = confirmActionType;
+    const target = confirmTargetId;
+    setConfirmActionType(null);
+    setConfirmTargetId(null);
+    
+    if (type === "delete") {
+      executeDeleteGroup();
+    } else if (type === "exit") {
+      executeExitGroup();
+    } else if (type === "delete_proof" && target) {
+      executeDeleteProof(target);
+    }
+  };
+
+  const executeDeleteGroup = async () => {
     try {
       setLoading(true);
       // Cascade delete members
@@ -269,8 +332,7 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleExitGroup = async () => {
-    if (!confirm("Are you sure you want to exit this group?")) return;
+  const executeExitGroup = async () => {
     try {
       setLoading(true);
       // Find member doc
@@ -303,6 +365,39 @@ export default function GroupDetailPage() {
       toast.success("Osusu started officially! Schedules and reminders are now active.");
     } catch (error) {
       toast.error("Failed to start Osusu");
+    }
+  };
+
+  const handleUploadProof = async () => {
+    if (!proofImageFile || !user || !id) return;
+    setUploadingProof(true);
+    try {
+      const fileRef = ref(storage, `payment_proofs/${id}/${Date.now()}_${proofImageFile.name}`);
+      await uploadBytes(fileRef, proofImageFile);
+      const url = await getDownloadURL(fileRef);
+
+      await addDoc(collection(db, `groups/${id}/proofs`), {
+        userId: user.uid,
+        userName: user.displayName || "Anonymous",
+        imageUrl: url,
+        createdAt: serverTimestamp(),
+      });
+      toast.success("Proof of payment uploaded successfully!");
+      setProofImageFile(null);
+    } catch (error) {
+      console.error("Proof upload error", error);
+      toast.error("Failed to upload proof");
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const executeDeleteProof = async (proofId: string) => {
+    try {
+      await deleteDoc(doc(db, `groups/${id}/proofs`, proofId));
+      toast.success("Proof of payment deleted");
+    } catch (error) {
+      toast.error("Failed to delete proof");
     }
   };
 
@@ -616,6 +711,61 @@ export default function GroupDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Proof of Payment Card */}
+          <Card className="border-border/30 overflow-hidden mb-4">
+            <CardHeader className="bg-gradient-to-br from-primary/5 to-orange-500/5 pb-3 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Proof of Payments
+              </CardTitle>
+              <div className="relative">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setProofImageFile(e.target.files?.[0] || null)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploadingProof}
+                />
+                <Button size="sm" variant="outline" className="h-7 text-[10px] md:text-xs">
+                  {uploadingProof ? "Uploading..." : proofImageFile ? "Selected" : "Upload Proof"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-3 pb-2 space-y-3">
+              {proofImageFile && (
+                <div className="flex flex-col items-center gap-2 mb-4 p-2 border border-dashed rounded-lg">
+                  <span className="text-xs text-muted-foreground">{proofImageFile.name}</span>
+                  <Button size="sm" onClick={handleUploadProof} disabled={uploadingProof}>
+                    <Upload className="h-4 w-4 mr-2" /> Confirm Upload
+                  </Button>
+                </div>
+              )}
+              
+              {proofs.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No proofs uploaded yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                  {proofs.map((proof) => (
+                    <div key={proof.id} className="relative group rounded-md overflow-hidden border border-border">
+                      <img src={proof.imageUrl} alt="Payment Proof" className="w-full aspect-square object-cover" />
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 flex justify-between items-center">
+                        <span className="text-[10px] text-white truncate">{proof.userName}</span>
+                        {proof.userId === user?.uid && (
+                          <button
+                            onClick={() => initiateConfirm("delete_proof", proof.id)}
+                            className="text-white hover:text-red-400 p-0.5"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Operations Card */}
           <Card className="border-border/30 p-4 space-y-3">
             {showStartOsusuBtn && (
@@ -624,12 +774,12 @@ export default function GroupDetailPage() {
               </Button>
             )}
             {isCreator && (
-              <Button onClick={handleDeleteGroup} variant="destructive" className="w-full rounded-full">
+              <Button onClick={() => initiateConfirm("delete")} variant="destructive" className="w-full rounded-full">
                 <Trash2 className="h-4 w-4 mr-2" /> Delete Group
               </Button>
             )}
             {isCurrentlyMember && (
-              <Button onClick={handleExitGroup} variant="outline" className="w-full text-destructive border-destructive hover:bg-destructive/5 rounded-full">
+              <Button onClick={() => initiateConfirm("exit")} variant="outline" className="w-full text-destructive border-destructive hover:bg-destructive/5 rounded-full">
                 <LogOut className="h-4 w-4 mr-2" /> Exit Group
               </Button>
             )}
@@ -805,6 +955,61 @@ export default function GroupDetailPage() {
             <Button variant="outline" className="w-full" onClick={() => setShowShareModal(false)}>
               Close
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmActionType && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-background p-6 rounded-xl max-w-sm w-full space-y-6">
+            <div className="flex flex-col items-center text-center">
+              <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+              <h2 className="text-xl font-bold">Confirmation Required</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                {confirmActionType === "delete" && "Are you absolutely sure you want to permanently delete this group? This action cannot be undone."}
+                {confirmActionType === "exit" && "Are you sure you want to exit this group? You will lose access to all chats and records."}
+                {confirmActionType === "delete_proof" && "Are you sure you want to delete this payment proof?"}
+              </p>
+            </div>
+
+            <div className="bg-muted p-3 rounded-lg flex flex-col items-center justify-center border border-border">
+              <span className="text-xs text-muted-foreground uppercase font-semibold mb-1">Confirmation Code</span>
+              <span className="text-2xl font-mono font-bold tracking-widest text-primary">{confirmExpectedCode}</span>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-center font-medium">Please type the code above to confirm:</p>
+              <Input
+                type="text"
+                placeholder="Enter 6-digit code"
+                value={confirmInputCode}
+                onChange={(e) => setConfirmInputCode(e.target.value)}
+                className="text-center text-lg tracking-widest font-mono h-12"
+                maxLength={6}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setConfirmActionType(null);
+                  setConfirmTargetId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                disabled={confirmInputCode !== confirmExpectedCode}
+                onClick={executeConfirmedAction}
+              >
+                Confirm
+              </Button>
+            </div>
           </div>
         </div>
       )}
