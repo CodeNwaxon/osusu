@@ -43,7 +43,10 @@ import {
   Upload,
   Image as ImageIcon,
   AlertTriangle,
-  UserMinus
+  UserMinus,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from "lucide-react";
 import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
 import { toast } from "sonner";
@@ -122,6 +125,10 @@ export default function GroupDetailPage() {
   const [confirmExpectedCode, setConfirmExpectedCode] = useState("");
   const [confirmInputCode, setConfirmInputCode] = useState("");
   const [confirmTargetId, setConfirmTargetId] = useState<string | null>(null);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -285,12 +292,12 @@ export default function GroupDetailPage() {
       toast.error("Incorrect confirmation code.");
       return;
     }
-    
+
     const type = confirmActionType;
     const target = confirmTargetId;
     setConfirmActionType(null);
     setConfirmTargetId(null);
-    
+
     if (type === "delete") {
       executeDeleteGroup();
     } else if (type === "exit") {
@@ -400,14 +407,14 @@ export default function GroupDetailPage() {
     try {
       const formData = new FormData();
       formData.append("file", proofImageFile);
-      
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) throw new Error("Failed to upload image");
-      
+
       const data = await response.json();
 
       await addDoc(collection(db, `groups/${id}/proofs`), {
@@ -595,7 +602,7 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      <div className="flex-1 container mx-auto px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-4">
+      <div className="flex-1 container mx-auto px-3 md:px-4 md:px-6 py-4 flex flex-col lg:flex-row gap-4">
         {/* Members/Group Info Panel */}
         <div
           className={`
@@ -709,49 +716,64 @@ export default function GroupDetailPage() {
             </CardHeader>
             <CardContent className="pt-3 pb-2">
               <div className="space-y-1">
-                {members.map((member, index) => (
-                  <div
-                    key={`member-${member.userId}-${index}`}
-                    className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    {member.photoURL ? (
-                      <img
-                        src={member.photoURL}
-                        alt={member.name}
-                        className="h-9 w-9 rounded-full ring-2 ring-border/30 object-cover shrink-0"
-                      />
-                    ) : (
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {member.name}
+                {members.map((member, index) => {
+                  const memberMonths = payoutMonths.filter(m => m.userId === member.userId).map(m => m.month).sort((a, b) => a - b);
+                  const monthlyContribution = group.amount * memberMonths.length;
+
+                  return (
+                    <div
+                      key={`member-${member.userId}-${index}`}
+                      className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      {member.photoURL ? (
+                        <img
+                          src={member.photoURL}
+                          alt={member.name}
+                          className="h-9 w-9 rounded-full ring-2 ring-border/30 object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {member.name}
+                          </p>
+                          {member.userId === group.creatorId && (
+                            <Crown className="h-3 w-3 text-primary shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Mail className="h-2.5 w-2.5 shrink-0" />
+                          {member.email || "No email"}
                         </p>
-                        {member.userId === group.creatorId && (
-                          <Crown className="h-3 w-3 text-primary shrink-0" />
+                        {memberMonths.length > 0 && (
+                          <div className="mt-1">
+                            <p className="text-xs font-bold text-green-600 dark:text-green-500">
+                              Total Monthly Contribution: ₦{Number(monthlyContribution).toLocaleString()}
+                            </p>
+                            <p className="text-[10.5px] text-muted-foreground mt-0.5">
+                              Payout Month{memberMonths.length > 1 ? "s" : ""}: {memberMonths.map(m => `Month ${m}`).join(" and ")}
+                            </p>
+                          </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                        <Mail className="h-2.5 w-2.5 shrink-0" />
-                        {member.email || "No email"}
-                      </p>
+                      {isCreator && member.userId !== group.creatorId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                          onClick={() => initiateConfirm("kick_out", member.userId)}
+                          title="Kick Out Member"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {isCreator && member.userId !== group.creatorId && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                        onClick={() => initiateConfirm("kick_out", member.userId)}
-                        title="Kick Out Member"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -785,19 +807,19 @@ export default function GroupDetailPage() {
                   </Button>
                 </div>
               )}
-              
+
               {proofs.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4">No proofs uploaded yet.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                  {proofs.map((proof) => (
-                    <div key={proof.id} className="relative group rounded-md overflow-hidden border border-border">
+                  {proofs.map((proof, idx) => (
+                    <div key={proof.id} className="relative group rounded-md overflow-hidden border border-border cursor-pointer" onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }}>
                       <img src={proof.imageUrl} alt="Payment Proof" className="w-full aspect-square object-cover" />
                       <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1.5 flex justify-between items-center">
                         <span className="text-[10px] text-white truncate">{proof.userName}</span>
                         {proof.userId === user?.uid && (
                           <button
-                            onClick={() => initiateConfirm("delete_proof", proof.id)}
+                            onClick={(e) => { e.stopPropagation(); initiateConfirm("delete_proof", proof.id); }}
                             className="text-white hover:text-red-400 p-0.5"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -1057,6 +1079,57 @@ export default function GroupDetailPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Lightbox */}
+      {lightboxOpen && proofs.length > 0 && (
+        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center" onClick={() => setLightboxOpen(false)}>
+          {/* Close Button */}
+          <button
+            className="absolute top-4 right-4 z-[110] text-white/80 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 transition-colors"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Image Counter */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
+            {lightboxIndex + 1} / {proofs.length}
+          </div>
+
+          {/* Uploader Name */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/80 text-sm bg-black/50 px-4 py-1.5 rounded-full">
+            Uploaded by: {proofs[lightboxIndex]?.userName}
+          </div>
+
+          {/* Left Arrow */}
+          {proofs.length > 1 && (
+            <button
+              className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-[110] text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 md:p-3 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((prev) => (prev === 0 ? proofs.length - 1 : prev - 1)); }}
+            >
+              <ChevronLeft className="h-6 w-6 md:h-8 md:w-8" />
+            </button>
+          )}
+
+          {/* Right Arrow */}
+          {proofs.length > 1 && (
+            <button
+              className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-[110] text-white/70 hover:text-white bg-black/40 hover:bg-black/60 rounded-full p-2 md:p-3 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((prev) => (prev === proofs.length - 1 ? 0 : prev + 1)); }}
+            >
+              <ChevronRight className="h-6 w-6 md:h-8 md:w-8" />
+            </button>
+          )}
+
+          {/* Main Image */}
+          <img
+            src={proofs[lightboxIndex]?.imageUrl}
+            alt={`Proof by ${proofs[lightboxIndex]?.userName}`}
+            className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

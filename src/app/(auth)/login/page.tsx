@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,16 @@ export default function LoginPage() {
           rating: 5.0, // Default rating
           trustScore: 100, // Default trust score
           completedGroups: 0,
+          createdAt: serverTimestamp(),
+        });
+
+        // Send welcome notification
+        await addDoc(collection(db, "notifications"), {
+          userId: user.uid,
+          title: "Welcome to Osusu 9ja! 🎉",
+          message: "Thanks for joining Osusu 9ja! Start by creating your own group or joining one with a referral link. Build trust, save together, and grow your wealth.",
+          link: "/create-group",
+          buttonText: "Create a Group",
           createdAt: serverTimestamp(),
         });
       }

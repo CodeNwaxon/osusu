@@ -1,5 +1,6 @@
 "use client";
 
+// Force recompile
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
@@ -223,12 +224,12 @@ export default function JoinGroupPage() {
             <p className="text-muted-foreground">
               Do you trust this person? By continuing, you acknowledge the risk.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="outline" className="w-full" onClick={() => setShowTrustModal(false)}>
-                Cancel
-              </Button>
+            <div className="flex flex-col gap-4">
               <Button variant="destructive" className="w-full" onClick={confirmTrust}>
                 I Understand & Join
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setShowTrustModal(false)}>
+                Cancel
               </Button>
             </div>
           </div>
@@ -284,12 +285,12 @@ export default function JoinGroupPage() {
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="outline" className="w-full" onClick={() => setShowMonthModal(false)}>
-                Cancel
-              </Button>
+            <div className="flex flex-col gap-4">
               <Button className="w-full bg-primary hover:bg-primary/95 text-white" onClick={confirmJoin} disabled={joining || selectedMonths.length === 0}>
                 {joining ? "Joining..." : "Join Group Now"}
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setShowMonthModal(false)}>
+                Cancel
               </Button>
             </div>
           </div>

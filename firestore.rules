@@ -109,6 +109,19 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
+    // Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow write: if isAdmin();
+      // Allowing creating of welcome notification by the authenticated user themselves if they just signed up
+      allow create: if isAuthenticated();
+    }
+
+    // Broadcasts Collection (Admin History)
+    match /broadcasts/{broadcastId} {
+      allow read, write: if isAdmin();
+    }
+
     // Default fallback (block everything else)
     match /{document=**} {
       allow read, write: if false;

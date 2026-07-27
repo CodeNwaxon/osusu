@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, deleteDoc, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, doc, deleteDoc, orderBy, query, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -18,6 +18,7 @@ interface Complaint {
   status: string;
   createdAt: any;
   uid: string | null;
+  readByAdmin?: boolean;
 }
 
 export default function AdminComplaintsPage() {
@@ -55,6 +56,15 @@ export default function AdminComplaintsPage() {
     } catch (error) {
       console.error("Error deleting complaint:", error);
       toast.error("Failed to delete complaint");
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "complaints", id), { readByAdmin: true });
+      setComplaints(complaints.map(c => c.id === id ? { ...c, readByAdmin: true } : c));
+    } catch (error) {
+      console.error("Error marking complaint as read:", error);
     }
   };
 
@@ -102,11 +112,22 @@ export default function AdminComplaintsPage() {
                       </a>
                     </CardDescription>
                   </div>
-                  {complaint.uid && <Badge variant="secondary" className="text-[10px]">Registered User</Badge>}
+                  <div className="flex gap-2 items-center">
+                    {!complaint.readByAdmin && <Badge variant="destructive" className="text-[10px]">New</Badge>}
+                    {complaint.uid && <Badge variant="secondary" className="text-[10px]">Registered User</Badge>}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="bg-muted/30 p-3 rounded-md text-sm whitespace-pre-wrap text-muted-foreground border">
+                <div 
+                  className={`bg-muted/30 p-3 rounded-md text-sm whitespace-pre-wrap text-muted-foreground border cursor-pointer hover:bg-muted/50 transition-colors ${!complaint.readByAdmin ? "ring-2 ring-primary/20" : ""}`}
+                  onClick={() => {
+                    if (!complaint.readByAdmin) {
+                      handleMarkAsRead(complaint.id);
+                    }
+                  }}
+                  title={!complaint.readByAdmin ? "Click to mark as read" : undefined}
+                >
                   {complaint.message}
                 </div>
               </CardContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Shield, Trash2, Check, X, UserPlus, Loader2, Pencil } from "lucide-react";
+import { Search, Shield, Trash2, Check, X, UserPlus, Loader2, Pencil, Lock, Eye, EyeOff } from "lucide-react";
 
 interface AdminRecord {
   uid: string;
@@ -28,6 +28,7 @@ const AVAILABLE_ROUTES = [
   "/admin/statistics",
   "/admin/settings",
   "/admin/complaints",
+  "/admin/broadcast",
   "/admin/faq",
   "/admin/terms",
   "/admin/about"
@@ -49,6 +50,11 @@ export default function AdminManagementPage() {
   const [editTarget, setEditTarget] = useState<AdminRecord | null>(null);
   const [editRoutes, setEditRoutes] = useState<string[]>([]);
 
+  // CEO Password state
+  const [ceoPassword, setCeoPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   useEffect(() => {
     console.log("AdminManagementPage mounted, isCEO:", isCEO);
   }, [isCEO]);
@@ -61,6 +67,7 @@ export default function AdminManagementPage() {
     console.log("CEO detected, fetching data...");
     fetchAdmins();
     fetchAllUsers();
+    fetchCeoPassword();
   }, [isCEO]);
 
   const fetchAdmins = async () => {
@@ -105,6 +112,38 @@ export default function AdminManagementPage() {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users list");
       setUsersLoaded(true);
+    }
+  };
+
+  const fetchCeoPassword = async () => {
+    try {
+      const settingsDoc = await getDoc(doc(db, "settings", "global"));
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        setCeoPassword(data.ceoPassword || "prince2020");
+      } else {
+        setCeoPassword("prince2020");
+      }
+    } catch (error) {
+      console.error("Error fetching CEO password:", error);
+      setCeoPassword("prince2020");
+    }
+  };
+
+  const handleSaveCeoPassword = async () => {
+    if (!ceoPassword.trim()) {
+      toast.error("Password cannot be empty");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await updateDoc(doc(db, "settings", "global"), { ceoPassword: ceoPassword.trim() });
+      toast.success("CEO password updated successfully");
+    } catch (error) {
+      console.error("Error saving CEO password:", error);
+      toast.error("Failed to save CEO password");
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -419,6 +458,39 @@ export default function AdminManagementPage() {
           </Card>
         </div>
       )}
+
+      {/* CEO Password Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-primary" /> CEO Password
+          </CardTitle>
+          <CardDescription>This password is required when admins send broadcast messages. Default: prince2020</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+            <div className="relative flex-1">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={ceoPassword}
+                onChange={(e) => setCeoPassword(e.target.value)}
+                placeholder="Enter CEO password"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <Button onClick={handleSaveCeoPassword} disabled={savingPassword}>
+              {savingPassword ? "Saving..." : "Save Password"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

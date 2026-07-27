@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationsMenu } from "@/components/NotificationsMenu";
 import { useAuth } from "@/store/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, Menu, X, Home, PlusCircle, HelpCircle, Shield, Phone, FileText, LayoutDashboard, Users, Settings } from "lucide-react";
+import { LogOut, Menu, X, Home, PlusCircle, HelpCircle, Shield, Phone, FileText, LayoutDashboard, Users, Settings, Megaphone } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
@@ -90,6 +91,7 @@ export function Navbar() {
             </Link>
           )}
 
+          <NotificationsMenu />
           <ThemeToggle />
 
           {user ? (
@@ -132,6 +134,7 @@ export function Navbar() {
 
         {/* Mobile hamburger */}
         <div className="flex md:hidden items-center gap-2">
+          <NotificationsMenu />
           <ThemeToggle />
           <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -169,6 +172,12 @@ export function Navbar() {
               {(isCEO || adminRoutes.includes("/admin/complaints") || adminRoutes.includes("*")) && (
                 <Link href="/admin/complaints" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
                   <Phone className="w-4 h-4" /> Complaints
+                </Link>
+              )}
+
+              {(isCEO || adminRoutes.includes("/admin/broadcast") || adminRoutes.includes("*")) && (
+                <Link href="/admin/broadcast" className="flex items-center gap-2 text-sm font-medium py-2" onClick={() => setMobileOpen(false)}>
+                  <Megaphone className="w-4 h-4" /> Broadcast
                 </Link>
               )}
 
@@ -232,4 +241,3 @@ export function Navbar() {
     </nav>
   );
 }
-
