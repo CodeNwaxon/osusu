@@ -6,6 +6,7 @@ import { useAuth } from "@/store/useAuth";
 import { useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setLoading } = useAuth();
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <InstallPrompt />
     </>
   );
 }

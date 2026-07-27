@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, getDocs, orderBy, collectionGroup } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, collectionGroup, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote } from "lucide-react";
+import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
 
 interface GroupData {
   id: string;
@@ -18,7 +19,7 @@ interface GroupData {
   duration: number;
   totalMembers: number;
   payoutDay: number;
-  payoutChargeType: string;
+  payoutChargeType: PayoutChargeType;
   payoutChargeValue: number;
   creatorId: string;
   refCode: string;
@@ -41,48 +42,51 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchGroups = async () => {
-      try {
-        // Fetch groups created by this user
-        const createdQuery = query(
-          collection(db, "groups"),
-          where("creatorId", "==", user.uid),
-          orderBy("createdAt", "desc")
-        );
-        const createdSnap = await getDocs(createdQuery);
-        const created: GroupData[] = [];
-        createdSnap.forEach((doc) => {
-          created.push({ id: doc.id, ...doc.data() } as GroupData);
-        });
-        setCreatedGroups(created);
+    // Listen to groups created by this user
+    const createdQuery = query(
+      collection(db, "groups"),
+      where("creatorId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsubCreated = onSnapshot(createdQuery, (createdSnap) => {
+      const created: GroupData[] = [];
+      createdSnap.forEach((doc) => {
+        created.push({ id: doc.id, ...doc.data() } as GroupData);
+      });
+      setCreatedGroups(created);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error watching created groups:", error);
+    });
 
-        // Fetch groups this user has joined (via members subcollection)
-        // We need to query all groups and check membership
-        const allGroupsSnap = await getDocs(collection(db, "groups"));
-        const joined: GroupData[] = [];
+    // Listen to all groups and check membership in real-time
+    const allGroupsQuery = collection(db, "groups");
+    const unsubJoined = onSnapshot(allGroupsQuery, async (allGroupsSnap) => {
+      const joined: GroupData[] = [];
+      
+      // We will perform a snapshot listen for members on each group to ensure real-time update
+      for (const groupDoc of allGroupsSnap.docs) {
+        const data = groupDoc.data();
+        if (data.creatorId === user.uid) continue;
 
-        for (const groupDoc of allGroupsSnap.docs) {
-          // Skip groups the user created (they're already in the created list)
-          if (groupDoc.data().creatorId === user.uid) continue;
-
-          const membersQuery = query(
-            collection(db, `groups/${groupDoc.id}/members`),
-            where("userId", "==", user.uid)
-          );
-          const membersSnap = await getDocs(membersQuery);
-          if (!membersSnap.empty) {
-            joined.push({ id: groupDoc.id, ...groupDoc.data() } as GroupData);
-          }
+        // Since it's nested snapshot, we can get active members list
+        const membersSnap = await getDocs(query(
+          collection(db, `groups/${groupDoc.id}/members`),
+          where("userId", "==", user.uid)
+        ));
+        if (!membersSnap.empty) {
+          joined.push({ id: groupDoc.id, ...data } as GroupData);
         }
-        setJoinedGroups(joined);
-      } catch (error) {
-        console.error("Error fetching dashboard groups:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+      setJoinedGroups(joined);
+    }, (error) => {
+      console.error("Error watching joined groups:", error);
+    });
 
-    fetchGroups();
+    return () => {
+      unsubCreated();
+      unsubJoined();
+    };
   }, [user]);
 
   if (authLoading || (!user && !authLoading)) {
@@ -275,8 +279,18 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Banknote className="h-3.5 w-3.5" /> Contribution
           </span>
-          <span className="font-bold text-base text-primary">
+          <span className="font-bold text-sm text-foreground">
             {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(group.amount)}
+          </span>
+        </div>
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Banknote className="h-3.5 w-3.5" /> Expected Payout
+          </span>
+          <span className="font-bold text-base text-primary">
+            {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(
+              calculateExpectedPayout(group.amount, group.totalMembers, group.payoutChargeType || "none", group.payoutChargeValue || 0)
+            )}
           </span>
         </div>
         <div className="flex justify-between items-center">

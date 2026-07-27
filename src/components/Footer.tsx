@@ -6,7 +6,7 @@ import { useAuth } from "@/store/useAuth";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
-import { LogOut, LogIn } from "lucide-react";
+import { LogOut, LogIn, Download } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -49,7 +49,7 @@ export function Footer() {
                 {user ? (
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer text-left w-full"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Sign Out
@@ -62,6 +62,17 @@ export function Footer() {
                 )}
               </li>
               <li><Link href="/" className="hover:text-foreground transition-colors">Discover Groups</Link></li>
+              <li>
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("trigger-pwa-install"));
+                  }}
+                  className="flex items-center gap-1.5 text-primary hover:text-primary/95 font-semibold cursor-pointer text-left w-full"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Install App
+                </button>
+              </li>
             </ul>
           </div>
 

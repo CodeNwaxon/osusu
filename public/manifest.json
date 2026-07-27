@@ -1,0 +1,21 @@
+{
+  "name": "Osusu 9ja",
+  "short_name": "Osusu",
+  "description": "Create or Join an Osusu Group. Transparent, secure, and reliable.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e05c2a",
+  "icons": [
+    {
+      "src": "/osusu_logo2.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/osusu_logo2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

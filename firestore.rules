@@ -35,18 +35,37 @@ service cloud.firestore {
 
     // Groups Collection
     match /groups/{groupId} {
-      allow read: if isAuthenticated();
+      allow read: if true;
       // Allow group creators or members to write, or admins
       allow write: if isAdmin() || isAuthenticated();
       
       // Group Members Subcollection
       match /members/{memberId} {
-        allow read, write: if isAuthenticated();
+        allow read: if true;
+        allow write: if isAuthenticated();
       }
 
       // Group Messages Subcollection (Chat)
       match /messages/{messageId} {
         allow read, write: if isAuthenticated();
+      }
+
+      // Payout Month Selections Subcollection
+      match /payoutMonths/{monthId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+
+      // Activities Subcollection
+      match /activities/{activityId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+
+      // Notifications Subcollection
+      match /notifications/{notificationId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
       }
     }
 

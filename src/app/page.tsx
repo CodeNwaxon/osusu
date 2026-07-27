@@ -14,6 +14,7 @@ import { Search, Users, Shield, TrendingUp, ArrowRight, Phone, Mail } from "luci
 import { Reviews } from "@/components/Reviews";
 import { FinancialNews } from "@/components/FinancialNews";
 import { AppSettings } from "./admin/settings/page";
+import { calculateExpectedPayout } from "@/lib/calculations";
 
 // Fallback image - using a data URI SVG placeholder (no local file needed)
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='45%25' font-family='Arial' font-size='48' fill='%23f59e0b' text-anchor='middle' dy='.3em'%3E💰 Osusu%3C/text%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EBuild Wealth Together%3C/text%3E%3C/svg%3E";
@@ -32,13 +33,17 @@ export default function Home() {
     const fetchData = async () => {
       try {
         // Fetch groups
-        const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(10));
+        const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(20));
         const querySnapshot = await getDocs(q);
         const fetchedGroups: any[] = [];
         querySnapshot.forEach((doc) => {
-          fetchedGroups.push({ id: doc.id, ...doc.data() });
+          const data = doc.data();
+          // Filter private groups client-side or check visibility
+          if (data.visibility !== "private") {
+            fetchedGroups.push({ id: doc.id, ...data });
+          }
         });
-        setGroups(fetchedGroups);
+        setGroups(fetchedGroups.slice(0, 10));
 
         // Fetch settings
         const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
@@ -54,14 +59,18 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Image rotation with smooth transition
+  // Image rotation with smooth transition based on global time
   useEffect(() => {
     if (settings?.heroImages && settings.heroImages.length > 1) {
+      const intervalDuration = 15000;
+      // Seed initial index based on global time
+      setCurrentImageIdx(Math.floor(Date.now() / intervalDuration) % settings.heroImages.length);
+
       const interval = setInterval(() => {
         setImageLoaded(false); // Reset for next image
         setImageError(false);
-        setCurrentImageIdx((prev) => (prev + 1) % settings.heroImages.length);
-      }, 15000);
+        setCurrentImageIdx(Math.floor(Date.now() / intervalDuration) % settings.heroImages.length);
+      }, intervalDuration);
       return () => clearInterval(interval);
     }
   }, [settings?.heroImages]);
@@ -269,8 +278,16 @@ export default function Home() {
                 <CardContent className="pt-5">
                   <div className="flex justify-between items-center mb-3">
                     <span className="text-xs text-muted-foreground">Contribution</span>
-                    <span className="font-bold text-base text-primary">
+                    <span className="font-bold text-sm text-foreground">
                       {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(group.amount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs text-muted-foreground">Expected Payout</span>
+                    <span className="font-bold text-base text-primary">
+                      {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(
+                        calculateExpectedPayout(group.amount, group.totalMembers, group.payoutChargeType, group.payoutChargeValue)
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

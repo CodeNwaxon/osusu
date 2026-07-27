@@ -35,7 +35,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "thumbs.dreamstime.com", // <-- ADD THIS
+        hostname: "thumbs.dreamstime.com",
         port: "",
         pathname: "/**",
       },

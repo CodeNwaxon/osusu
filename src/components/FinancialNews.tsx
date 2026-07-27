@@ -64,7 +64,7 @@ export function FinancialNews() {
         <div className="container mx-auto px-4 md:px-6">
           <div className="flex items-center gap-3 mb-10">
             <Newspaper className="h-7 w-7 text-primary animate-pulse" />
-            <h2 className="text-xl md:text-4xl font-bold text-foreground">
+            <h2 className="text-lg md:text-4xl font-bold text-foreground">
               Nigerian Financial News
             </h2>
           </div>
@@ -86,7 +86,7 @@ export function FinancialNews() {
           <div className="flex items-center gap-3">
             <Newspaper className="h-7 w-7 text-primary" />
             <div>
-              <h2 className="text-xl md:text-4xl font-bold text-foreground">
+              <h2 className="text-lg md:text-4xl font-bold text-foreground">
                 {isFinanceNews ? "Nigerian Financial News" : "Top Nigerian News"}
               </h2>
               {!isFinanceNews && (

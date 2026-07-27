@@ -20,3 +20,18 @@ export function calculateNet(amount: number, type: PayoutChargeType, value: numb
     net: amount - charge
   };
 }
+
+/**
+ * Calculate the expected payout for a group member.
+ * Formula: (Contribution × Expected Members) − Admin Fee
+ */
+export function calculateExpectedPayout(
+  contribution: number,
+  totalMembers: number,
+  chargeType: PayoutChargeType,
+  chargeValue: number
+): number {
+  const gross = contribution * totalMembers;
+  const { net } = calculateNet(gross, chargeType, chargeValue);
+  return net;
+}
