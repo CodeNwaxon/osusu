@@ -688,7 +688,12 @@ export default function GroupDetailPage() {
                   variant="outline"
                   size="sm"
                   className="rounded-full text-[10px] md:text-xs h-7 md:h-8 px-2 md:px-3"
-                  onClick={() => setShowMembers(!showMembers)}
+                  onClick={() => {
+                    setShowMembers(!showMembers);
+                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
                 >
                   <Users className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1" />
                   Group Info
