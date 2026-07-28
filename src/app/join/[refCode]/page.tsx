@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { calculateExpectedPayout } from "@/lib/calculations";
+import { AlertTriangle, Calendar } from "lucide-react";
 
 export default function JoinGroupPage() {
   const { refCode } = useParams();
@@ -26,6 +27,7 @@ export default function JoinGroupPage() {
   const [occupiedMonths, setOccupiedMonths] = useState<number[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const [hasMonthAssigned, setHasMonthAssigned] = useState(false);
+  const [showSessionActiveModal, setShowSessionActiveModal] = useState(false);
   const selectedMonthsRef = useRef<number[]>([]);
 
   // Keep ref in sync with state so the onSnapshot callback always has latest selections
@@ -107,6 +109,11 @@ export default function JoinGroupPage() {
       } else {
         router.push(`/group/${group.id}`);
       }
+      return;
+    }
+    // If osusu already started and user is NOT a member, show session active modal
+    if (group.osusuStarted && !isMember) {
+      setShowSessionActiveModal(true);
       return;
     }
     setShowTrustModal(true);
@@ -202,6 +209,18 @@ export default function JoinGroupPage() {
     group.payoutChargeType || "none",
     group.payoutChargeValue || 0
   );
+  // Calculate session end date
+  const getSessionEndDate = () => {
+    if (!group.osusuStarted || !group.osusuStartDate) return null;
+    const startDate = group.osusuStartDate.toDate ? group.osusuStartDate.toDate() : new Date(group.osusuStartDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(startDate.getMonth() + group.duration);
+    // Set to the payout day of the last month
+    endDate.setDate(group.payoutDay || 4);
+    return endDate;
+  };
+
+  const sessionEndDate = getSessionEndDate();
 
   return (
     <div className="container mx-auto py-10 max-w-xl px-4">
@@ -327,6 +346,55 @@ export default function JoinGroupPage() {
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setShowMonthModal(false)}>
                 Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Already Active Modal */}
+      {showSessionActiveModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col items-center text-center">
+              <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground">Session Already Active</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                This Osusu group's contribution session has already started. You cannot join mid-cycle.
+              </p>
+            </div>
+
+            <div className="bg-muted p-4 rounded-lg border border-border space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-muted-foreground">Session ends on:</span>
+              </div>
+              {sessionEndDate ? (
+                <p className="text-lg font-bold text-primary text-center">
+                  {sessionEndDate.toLocaleDateString("en-NG", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                  })}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">End date not available</p>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              You can join this group after the current session ends, or explore other available groups.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <Button className="w-full" onClick={() => { setShowSessionActiveModal(false); router.push("/"); }}>
+                Browse Other Groups
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setShowSessionActiveModal(false)}>
+                Close
               </Button>
             </div>
           </div>
