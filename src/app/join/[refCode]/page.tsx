@@ -1,9 +1,9 @@
 "use client";
 
 // Force recompile
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "sonner";
@@ -26,6 +26,12 @@ export default function JoinGroupPage() {
   const [occupiedMonths, setOccupiedMonths] = useState<number[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const [hasMonthAssigned, setHasMonthAssigned] = useState(false);
+  const selectedMonthsRef = useRef<number[]>([]);
+
+  // Keep ref in sync with state so the onSnapshot callback always has latest selections
+  useEffect(() => {
+    selectedMonthsRef.current = selectedMonths;
+  }, [selectedMonths]);
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -47,21 +53,6 @@ export default function JoinGroupPage() {
               setIsMember(true);
             }
           }
-
-          // Fetch occupied months
-          const monthsQuery = collection(db, `groups/${groupData.id}/payoutMonths`);
-          const monthsSnap = await getDocs(monthsQuery);
-          const occupied: number[] = [];
-          let userHasMonth = false;
-          monthsSnap.forEach((doc) => {
-            const data = doc.data();
-            occupied.push(data.month);
-            if (user && data.userId === user.uid) {
-              userHasMonth = true;
-            }
-          });
-          setOccupiedMonths(occupied);
-          setHasMonthAssigned(userHasMonth);
         } else {
           toast.error("Group not found");
         }
@@ -73,6 +64,36 @@ export default function JoinGroupPage() {
     };
     if (refCode) fetchGroup();
   }, [refCode, user]);
+
+  // Real-time listener for occupied months — updates instantly when anyone picks a month
+  useEffect(() => {
+    if (!group?.id) return;
+
+    const monthsCol = collection(db, `groups/${group.id}/payoutMonths`);
+    const unsub = onSnapshot(monthsCol, (snapshot) => {
+      const occupied: number[] = [];
+      let userHasMonth = false;
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        occupied.push(data.month);
+        if (user && data.userId === user.uid) {
+          userHasMonth = true;
+        }
+      });
+      setOccupiedMonths(occupied);
+      setHasMonthAssigned(userHasMonth);
+
+      // Auto-deselect any months that were just taken by someone else in real-time
+      const currentSelections = selectedMonthsRef.current;
+      const conflicting = currentSelections.filter(m => occupied.includes(m));
+      if (conflicting.length > 0) {
+        setSelectedMonths(prev => prev.filter(m => !occupied.includes(m)));
+        toast.warning(`Month${conflicting.length > 1 ? "s" : ""} ${conflicting.map(m => m).join(", ")} ${conflicting.length > 1 ? "were" : "was"} just taken by another member.`);
+      }
+    });
+
+    return () => unsub();
+  }, [group?.id, user]);
 
   const handleJoin = async () => {
     if (!user) {
@@ -112,6 +133,21 @@ export default function JoinGroupPage() {
 
     setJoining(true);
     try {
+      // Final race-condition check: re-fetch occupied months right before writing
+      const freshMonthsSnap = await getDocs(collection(db, `groups/${group.id}/payoutMonths`));
+      const freshOccupied: number[] = [];
+      freshMonthsSnap.forEach((doc) => {
+        freshOccupied.push(doc.data().month);
+      });
+
+      const alreadyTaken = selectedMonths.filter(m => freshOccupied.includes(m));
+      if (alreadyTaken.length > 0) {
+        toast.error(`Month${alreadyTaken.length > 1 ? "s" : ""} ${alreadyTaken.join(", ")} already taken. Please choose different month(s).`);
+        setSelectedMonths(prev => prev.filter(m => !freshOccupied.includes(m)));
+        setJoining(false);
+        return;
+      }
+
       if (!isMember) {
         // Final race condition membership check
         const memberQuery = query(
@@ -242,7 +278,7 @@ export default function JoinGroupPage() {
           <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6 max-h-[90vh] overflow-y-auto">
             <div>
               <h2 className="text-xl font-bold">Select Payout Month(s)</h2>
-              <p className="text-xs text-muted-foreground mt-1">Choose which month(s) you wish to receive the payout.</p>
+              <p className="text-xs text-muted-foreground mt-1">Choose which month(s) you wish to receive the payout. Months update in real-time.</p>
             </div>
 
             <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">

@@ -67,6 +67,11 @@ interface GroupData {
   isPrivate?: boolean;
   osusuStarted?: boolean;
   osusuStartDate?: any;
+  bankDetails?: {
+    accountName: string;
+    accountNumber: string;
+    bank: string;
+  };
 }
 
 interface MemberData {
@@ -117,6 +122,7 @@ export default function GroupDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showMembers, setShowMembers] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showPaymentDetailsModal, setShowPaymentDetailsModal] = useState(false);
 
   const [proofs, setProofs] = useState<PaymentProof[]>([]);
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -382,7 +388,19 @@ export default function GroupDetailPage() {
       for (const m of monthsSnap.docs) {
         await deleteDoc(m.ref);
       }
-      toast.success("Member removed from group successfully");
+      // Remove proofs uploaded by this member
+      const proofsQuery = query(collection(db, `groups/${id}/proofs`), where("userId", "==", memberId));
+      const proofsSnap = await getDocs(proofsQuery);
+      for (const p of proofsSnap.docs) {
+        await deleteDoc(p.ref);
+      }
+      // Remove messages sent by this member
+      const messagesQuery = query(collection(db, `groups/${id}/messages`), where("senderId", "==", memberId));
+      const messagesSnap = await getDocs(messagesQuery);
+      for (const msg of messagesSnap.docs) {
+        await deleteDoc(msg.ref);
+      }
+      toast.success("Member removed from group completely");
       setLoading(false);
     } catch (error) {
       toast.error("Failed to remove member");
@@ -555,6 +573,18 @@ export default function GroupDetailPage() {
   const isCreator = group.creatorId === user?.uid;
   const isCurrentlyMember = members.some(m => m.userId === user?.uid);
 
+  if (!isCurrentlyMember && !isCreator) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 p-4 text-center">
+        <h2 className="text-2xl font-bold text-foreground">Access Denied</h2>
+        <p className="text-muted-foreground">You are no longer a member of this group, or you haven't joined yet.</p>
+        <Link href={`/join/${group.refCode}`}>
+          <Button>Join Group</Button>
+        </Link>
+      </div>
+    );
+  }
+
   // Group messages by date
   const groupedMessages: { date: string; msgs: ChatMessage[] }[] = [];
   messages.forEach((msg) => {
@@ -722,6 +752,14 @@ export default function GroupDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs font-semibold mb-1 bg-primary text-white hover:bg-primary/80"
+                onClick={() => setShowPaymentDetailsModal(true)}
+              >
+                Payment Details
+              </Button>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Contribution</span>
                 <span className="font-bold text-sm text-foreground">
@@ -784,7 +822,7 @@ export default function GroupDetailPage() {
                 const monthNum = idx + 1;
                 const assignment = payoutMonths.find(m => m.month === monthNum);
                 const payoutDate = getPayoutDateForMonth(monthNum);
-                
+
                 let showPaidBtn = false;
                 if (isCreator && group.osusuStarted && payoutDate) {
                   const passed24h = new Date(payoutDate);
@@ -816,7 +854,7 @@ export default function GroupDetailPage() {
                             <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 text-destructive border-destructive hover:bg-destructive hover:text-white" onClick={() => handleDropMonth(assignment.id, monthNum)}>Drop</Button>
                           )}
                           {showPaidBtn && (
-                            <Button size="sm" className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkPaid(assignment.id, monthNum)}>Paid</Button>
+                            <Button size="sm" className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMarkPaid(assignment.id, monthNum)}>Has Received</Button>
                           )}
                         </div>
                       </div>
@@ -892,7 +930,7 @@ export default function GroupDetailPage() {
                           </div>
                         )}
                       </div>
-                      {isCreator && member.userId !== group.creatorId && (
+                      {isCreator && member.userId !== group.creatorId && (!group.osusuStarted || showResetBtn) && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -978,12 +1016,12 @@ export default function GroupDetailPage() {
               </Button>
             )}
             {isCreator && (
-              <Button onClick={() => initiateConfirm("delete")} variant="destructive" className="w-full rounded-full">
+              <Button onClick={() => initiateConfirm("delete")} variant="destructive" className="w-full rounded-full" disabled={group.osusuStarted && !showResetBtn}>
                 <Trash2 className="h-4 w-4 mr-2" /> Delete Group
               </Button>
             )}
             {isCurrentlyMember && (
-              <Button onClick={() => initiateConfirm("exit")} variant="outline" className="w-full text-destructive border-destructive hover:bg-destructive/5 rounded-full">
+              <Button onClick={() => initiateConfirm("exit")} variant="outline" className="w-full text-destructive border-destructive hover:bg-destructive/5 rounded-full" disabled={group.osusuStarted && !showResetBtn}>
                 <LogOut className="h-4 w-4 mr-2" /> Exit Group
               </Button>
             )}
@@ -1135,6 +1173,43 @@ export default function GroupDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Payment Details Modal */}
+      {showPaymentDetailsModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-background p-6 rounded-xl max-w-sm w-full space-y-6 relative">
+            <button
+              onClick={() => setShowPaymentDetailsModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold">Admin's Payment Details</h2>
+              <p className="text-xs text-muted-foreground mt-1">Please make payments to this account.</p>
+            </div>
+
+            {group.bankDetails ? (
+              <div className="space-y-4">
+                <div className="bg-muted p-3 rounded-lg border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold block mb-1">Bank Name</span>
+                  <span className="text-sm font-bold text-foreground">{group.bankDetails.bank}</span>
+                </div>
+                <div className="bg-muted p-3 rounded-lg border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold block mb-1">Account Number</span>
+                  <span className="text-sm font-bold text-foreground tracking-widest">{group.bankDetails.accountNumber}</span>
+                </div>
+                <div className="bg-muted p-3 rounded-lg border border-border">
+                  <span className="text-xs text-muted-foreground uppercase font-semibold block mb-1">Account Name</span>
+                  <span className="text-sm font-bold text-foreground">{group.bankDetails.accountName}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No payment details provided for this group.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Share Group Invitation Modal */}
       {showShareModal && (

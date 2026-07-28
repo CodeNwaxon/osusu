@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, onSnapshot, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "sonner";
@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
-import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote, Lock, Globe } from "lucide-react";
+import { Users, PlusCircle, ArrowRight, Crown, UserPlus, LayoutDashboard, Calendar, Banknote, Lock, Globe, RefreshCw } from "lucide-react";
 import { calculateExpectedPayout, PayoutChargeType } from "@/lib/calculations";
+import { useAuth as useAuthHook } from "@/store/useAuth";
 
 interface GroupData {
   id: string;
@@ -268,12 +269,48 @@ export default function DashboardPage() {
 
 function GroupCard({ group, role }: { group: GroupData; role: "creator" | "member" }) {
   const [isToggling, setIsToggling] = useState(false);
+  const [isCreatorMember, setIsCreatorMember] = useState(true);
+  const [isRejoining, setIsRejoining] = useState(false);
+  const { user } = useAuthHook();
+
+  // Real-time check: is the creator still a member of their own group?
+  useEffect(() => {
+    if (role !== "creator" || !user) return;
+    const membersQuery = query(
+      collection(db, `groups/${group.id}/members`),
+      where("userId", "==", user.uid)
+    );
+    const unsub = onSnapshot(membersQuery, (snap) => {
+      setIsCreatorMember(!snap.empty);
+    });
+    return () => unsub();
+  }, [group.id, role, user]);
+
+  const handleRejoinGroup = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) return;
+    setIsRejoining(true);
+    try {
+      await addDoc(collection(db, `groups/${group.id}/members`), {
+        userId: user.uid,
+        joinedAt: serverTimestamp(),
+        paymentStatus: "pending"
+      });
+      toast.success("Rejoined your group successfully!");
+    } catch (error) {
+      console.error("Failed to rejoin group", error);
+      toast.error("Failed to rejoin group");
+    } finally {
+      setIsRejoining(false);
+    }
+  };
 
   const handleTogglePrivacy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (role !== "creator") return;
-    
+
     setIsToggling(true);
     try {
       await updateDoc(doc(db, "groups", group.id), {
@@ -346,7 +383,7 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
           <span className="text-sm font-medium">/ {group.totalMembers}</span>
         </div>
       </CardContent>
-      <CardFooter className="pt-0 flex flex-col gap-2 shrink-0">
+      <CardFooter className="pt-2  flex flex-col gap-2 shrink-0">
         <Link
           href={`/group/${group.id}`}
           className={buttonVariants({
@@ -357,6 +394,16 @@ function GroupCard({ group, role }: { group: GroupData; role: "creator" | "membe
           Open Group
           <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
+        {role === "creator" && !isCreatorMember && (
+          <button
+            onClick={handleRejoinGroup}
+            disabled={isRejoining}
+            className="w-full text-xs font-medium py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRejoining ? "animate-spin" : ""}`} />
+            {isRejoining ? "Rejoining..." : "Rejoin Group"}
+          </button>
+        )}
         {role === "creator" && (
           <button
             onClick={handleTogglePrivacy}
