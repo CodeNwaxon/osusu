@@ -758,7 +758,7 @@ export default function GroupDetailPage() {
                 className="w-full text-xs font-semibold mb-1 bg-primary text-white hover:bg-primary/80"
                 onClick={() => setShowPaymentDetailsModal(true)}
               >
-                Payment Details
+                Admin Account Details 👈
               </Button>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Contribution</span>
