@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/store/useAuth";
-import { collection, query, limit, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, limit, onSnapshot, orderBy, doc, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Users, Shield, TrendingUp, ArrowRight, Phone, Mail } from "lucide-react";
+import { Search, Users, Shield, TrendingUp, ArrowRight, Phone, Mail, MessageSquare, Crown } from "lucide-react";
 import { Reviews } from "@/components/Reviews";
 import { FinancialNews } from "@/components/FinancialNews";
 import { AppSettings } from "./admin/settings/page";
 import { calculateExpectedPayout } from "@/lib/calculations";
+import { toast } from "sonner";
 
 // Fallback image - using a data URI SVG placeholder (no local file needed)
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='45%25' font-family='Arial' font-size='48' fill='%23f59e0b' text-anchor='middle' dy='.3em'%3E💰 Osusu%3C/text%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EBuild Wealth Together%3C/text%3E%3C/svg%3E";
@@ -28,19 +31,29 @@ export default function Home() {
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(30);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [selectedGroupToContact, setSelectedGroupToContact] = useState<any>(null);
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [sendingContact, setSendingContact] = useState(false);
 
   useEffect(() => {
     // Real-time listener for groups
-    const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(20));
+    const q = query(collection(db, "groups"), orderBy("createdAt", "desc"), limit(visibleCount));
     const unsubscribeGroups = onSnapshot(q, (querySnapshot) => {
       const fetchedGroups: any[] = [];
       querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (!data.isPrivate && data.visibility !== "private") {
-          fetchedGroups.push({ id: doc.id, ...data });
-        }
+        fetchedGroups.push({ id: doc.id, ...doc.data() });
       });
-      setGroups(fetchedGroups.slice(0, 10));
+      // Sort in JS: VIP first, then createdAt (createdAt is already sorted by query)
+      fetchedGroups.sort((a, b) => {
+        if (a.isVip && !b.isVip) return -1;
+        if (!a.isVip && b.isVip) return 1;
+        return 0;
+      });
+      setGroups(fetchedGroups);
     }, (error) => {
       console.error("Error fetching groups real-time:", error);
     });
@@ -61,7 +74,7 @@ export default function Home() {
     fetchSettings();
 
     return () => unsubscribeGroups();
-  }, []);
+  }, [visibleCount]);
 
   // Image rotation with smooth transition based on global time
   useEffect(() => {
@@ -91,6 +104,44 @@ export default function Home() {
     : FALLBACK_IMAGE;
 
   const heroText = settings?.heroText || "Create or join a transparent, secure, and reliable Osusu group with people you trust. Track every payment, every payout, every naira.";
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Please sign in to contact the group creator.");
+      return;
+    }
+    if (!contactEmail.trim() || !contactMessage.trim()) {
+      toast.error("Email and message are required.");
+      return;
+    }
+    setSendingContact(true);
+    try {
+      await addDoc(collection(db, "notifications"), {
+        type: "contact_creator",
+        targetUserId: selectedGroupToContact.creatorId,
+        userId: selectedGroupToContact.creatorId, // for NotificationsMenu compatibility
+        title: "New Private Group Request",
+        link: "/inbox",
+        buttonText: "View Inbox",
+        groupId: selectedGroupToContact.id,
+        groupName: selectedGroupToContact.name,
+        senderId: user.uid,
+        senderEmail: contactEmail.trim(),
+        senderPhone: contactPhone.trim(),
+        message: contactMessage.trim(),
+        createdAt: serverTimestamp(),
+        isRead: false
+      });
+      toast.success("Message sent to group creator successfully.");
+      setShowContactModal(false);
+      setContactMessage("");
+    } catch (err) {
+      toast.error("Failed to send message.");
+    } finally {
+      setSendingContact(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -264,7 +315,13 @@ export default function Home() {
               >
                 <CardHeader className="bg-muted/30 pb-4">
                   <div className="flex justify-between items-start gap-2">
-                    <CardTitle className="text-lg line-clamp-1">{group.name}</CardTitle>
+                    <CardTitle className="text-lg line-clamp-1 flex items-center gap-2">
+                      {group.name}
+                      {group.isVip && <Crown className="w-4 h-4 text-amber-500" />}
+                      {(group.isPrivate || group.visibility === "private") && (
+                        <Badge variant="outline" className="text-[10px] bg-muted h-5 rounded-full px-1.5 ml-1">Private</Badge>
+                      )}
+                    </CardTitle>
                     {group.payoutChargeType === "none" ? (
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100 whitespace-nowrap text-[10px]">
                         No Fee
@@ -296,19 +353,33 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">Members</span>
-                    <span className="text-sm font-medium">0 / {group.totalMembers}</span>
+                    <span className="text-sm font-medium">{group.membersCount || 0} / {group.totalMembers}</span>
                   </div>
                 </CardContent>
                 <CardFooter className="pt-0">
-                  <Link
-                    href={`/join/${group.refCode}`}
-                    className={buttonVariants({
-                      variant: "outline",
-                      className: "w-full rounded-full group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors",
-                    })}
-                  >
-                    View Details
-                  </Link>
+                  {(group.isPrivate || group.visibility === "private") ? (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-full group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors"
+                      onClick={() => {
+                        setSelectedGroupToContact(group);
+                        setContactEmail(user?.email || "");
+                        setShowContactModal(true);
+                      }}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" /> Contact Creator
+                    </Button>
+                  ) : (
+                    <Link
+                      href={`/join/${group.refCode}`}
+                      className={buttonVariants({
+                        variant: "outline",
+                        className: "w-full rounded-full group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors",
+                      })}
+                    >
+                      View Details
+                    </Link>
+                  )}
                 </CardFooter>
               </Card>
             ))}
@@ -320,6 +391,14 @@ export default function Home() {
                 <p className="text-sm mt-1">Try a different search or create your own group.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {!loading && filteredGroups.length >= visibleCount && (
+          <div className="mt-8 flex justify-center">
+            <Button variant="secondary" onClick={() => setVisibleCount(prev => prev + 30)} className="rounded-full px-8">
+              Load More Groups
+            </Button>
           </div>
         )}
       </div>
@@ -339,6 +418,77 @@ export default function Home() {
             <span className="flex items-center gap-1.5"><Phone className="w-4 h-4 text-primary" /> {settings.contactPhone}</span>
             <span className="flex items-center gap-1.5"><Mail className="w-4 h-4 text-primary" /> {settings.contactEmail}</span>
             <Link href="/contact" className="hover:text-primary transition-colors hover:underline">Need Help?</Link>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Creator Modal */}
+      {showContactModal && selectedGroupToContact && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-background p-6 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h2 className="text-xl font-bold mb-2 text-foreground">Contact Group Creator</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              "{selectedGroupToContact.name}" is a private group. You can only join via invite link or by contacting the creator.
+            </p>
+            <form onSubmit={handleContactSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="contactEmail">Your Email *</Label>
+                <Input 
+                  id="contactEmail"
+                  type="email" 
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactPhone">Your Phone Number (Optional)</Label>
+                <Input 
+                  id="contactPhone"
+                  type="tel" 
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="08012345678"
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactMessage">Message *</Label>
+                <textarea 
+                  id="contactMessage"
+                  value={contactMessage}
+                  onChange={(e) => setContactMessage(e.target.value)}
+                  placeholder="Hello, I would like to join this Osusu group..."
+                  required
+                  rows={4}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-secondary/80 text-[10px]"
+                    onClick={() => setContactMessage("Hello, I am interested in joining this private group. Please let me know the requirements.")}
+                  >
+                    Interested to join
+                  </Badge>
+                  <Badge 
+                    variant="secondary" 
+                    className="cursor-pointer hover:bg-secondary/80 text-[10px]"
+                    onClick={() => setContactMessage("Hi, I know some members of this group and would love to participate in the next cycle.")}
+                  >
+                    Know some members
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 pt-4 border-t border-border/50">
+                <Button type="submit" className="w-full" disabled={sendingContact}>
+                  {sendingContact ? "Sending..." : "Send Request"}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setShowContactModal(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

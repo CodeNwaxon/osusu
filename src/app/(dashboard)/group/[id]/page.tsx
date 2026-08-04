@@ -15,7 +15,8 @@ import {
   deleteDoc,
   updateDoc,
   where,
-  writeBatch
+  writeBatch,
+  increment
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -365,6 +366,10 @@ export default function GroupDetailPage() {
       for (const m of monthsSnap.docs) {
         await deleteDoc(m.ref);
       }
+      // Decrement membersCount on group
+      await updateDoc(doc(db, "groups", id as string), {
+        membersCount: increment(-1)
+      });
       toast.success("Exited group successfully");
       router.push("/dashboard");
     } catch (error) {
@@ -400,6 +405,10 @@ export default function GroupDetailPage() {
       for (const msg of messagesSnap.docs) {
         await deleteDoc(msg.ref);
       }
+      // Decrement membersCount on group
+      await updateDoc(doc(db, "groups", id as string), {
+        membersCount: increment(-1)
+      });
       toast.success("Member removed from group completely");
       setLoading(false);
     } catch (error) {

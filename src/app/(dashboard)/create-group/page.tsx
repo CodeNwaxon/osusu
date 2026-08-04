@@ -125,6 +125,7 @@ export default function CreateGroupPage() {
         refCode,
         status: "active",
         createdAt: serverTimestamp(),
+        membersCount: 1,
       });
 
       // Creator automatically joins the group they created

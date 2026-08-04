@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, getDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
-import { Bell, Check, Trash2, ExternalLink } from "lucide-react";
+import { Bell, Check, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 interface AppNotification {
     id: string;
     title: string;
@@ -17,6 +18,7 @@ interface AppNotification {
 }
 export function NotificationsMenu() {
     const { user } = useAuth();
+    const router = useRouter();
     const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [readIds, setReadIds] = useState<string[]>([]);
     const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -33,43 +35,66 @@ export function NotificationsMenu() {
     }, [user]);
     useEffect(() => {
         if (!user) return;
-        // Fetch notifications targeting the user specifically
-    const qUser = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid)
-    );
-
-    // Fetch broadcast notifications targeting everyone
-    const qAll = query(
-      collection(db, "notifications"),
-      where("userId", "==", "all")
-    );
-
-    const handleSnapshot = (snapshot: any, type: 'user' | 'all') => {
-      const list: AppNotification[] = [];
-      snapshot.forEach((doc: any) => {
-        list.push({ id: doc.id, ...doc.data() } as AppNotification);
-      });
+    let expiryDays = 14;
+    
+    const setupListeners = async () => {
+      try {
+        const settingsSnap = await getDoc(doc(db, "settings", "appConfig"));
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data();
+          if (data.notificationExpiryDays) {
+            expiryDays = data.notificationExpiryDays;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch notification expiry setting", err);
+      }
       
-      setNotifications(prev => {
-        // Filter out old ones of this type and add new ones
-        const otherType = prev.filter(n => type === 'user' ? n.userId === 'all' : n.userId !== 'all');
-        const combined = [...otherType, ...list];
-        // Sort by createdAt descending
-        return combined.sort((a, b) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-          return timeB - timeA;
-        });
-      });
-    };
+      const qUser = query(collection(db, "notifications"), where("userId", "==", user.uid));
+      const qAll = query(collection(db, "notifications"), where("userId", "==", "all"));
 
-    const unsubscribeUser = onSnapshot(qUser, (snap) => handleSnapshot(snap, 'user'));
-    const unsubscribeAll = onSnapshot(qAll, (snap) => handleSnapshot(snap, 'all'));
+      const handleSnapshot = (snapshot: any, type: 'user' | 'all') => {
+        const list: AppNotification[] = [];
+        const now = Date.now();
+        const maxAgeMs = expiryDays * 24 * 60 * 60 * 1000;
+        
+        snapshot.forEach((docSnap: any) => {
+          const data = docSnap.data();
+          const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : now;
+          if (now - createdAt > maxAgeMs) {
+            // Auto delete from backend
+            deleteDoc(doc(db, "notifications", docSnap.id)).catch(console.error);
+          } else {
+            list.push({ id: docSnap.id, ...data } as AppNotification);
+          }
+        });
+        
+        setNotifications(prev => {
+          const otherType = prev.filter(n => type === 'user' ? n.userId === 'all' : n.userId !== 'all');
+          const combined = [...otherType, ...list];
+          return combined.sort((a, b) => {
+            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+            return timeB - timeA;
+          });
+        });
+      };
+
+      const unsubscribeUser = onSnapshot(qUser, (snap) => handleSnapshot(snap, 'user'));
+      const unsubscribeAll = onSnapshot(qAll, (snap) => handleSnapshot(snap, 'all'));
+
+      return () => {
+        unsubscribeUser();
+        unsubscribeAll();
+      };
+    };
+    
+    let unsubPromise = setupListeners();
 
     return () => {
-      unsubscribeUser();
-      unsubscribeAll();
+      unsubPromise.then(unsub => {
+        if (unsub) unsub();
+      });
     };
     }, [user]);
     useEffect(() => {
@@ -190,15 +215,16 @@ export function NotificationsMenu() {
                                             )}
                                             <div className="flex items-center justify-between mt-2">
                                                 {notif.link ? (
-                                                    <a
-                                                        href={notif.link}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setIsOpen(false);
+                                                            router.push(notif.link!);
+                                                        }}
                                                         className="inline-flex items-center text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1.5 rounded-md transition-colors"
                                                     >
-                                                        {notif.buttonText || "View Link"} <ExternalLink className="h-3 w-3 ml-1.5" />
-                                                    </a>
+                                                        {notif.buttonText || "View Link"} <ArrowRight className="h-3 w-3 ml-1.5" />
+                                                    </button>
                                                 ) : <span />}
                                                 {/* Mobile: always-visible buttons */}
                                                 <div className="flex sm:hidden items-center gap-1">

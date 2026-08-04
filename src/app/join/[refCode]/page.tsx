@@ -3,7 +3,7 @@
 // Force recompile
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, doc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { calculateExpectedPayout } from "@/lib/calculations";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle, Calendar, ArrowLeft } from "lucide-react";
 
 export default function JoinGroupPage() {
   const { refCode } = useParams();
@@ -175,6 +175,11 @@ export default function JoinGroupPage() {
             joinedAt: serverTimestamp(),
             paymentStatus: "pending"
           });
+          
+          // Increment member count on group document
+          await updateDoc(doc(db, "groups", group.id), {
+            membersCount: increment(1)
+          });
         }
       }
 
@@ -224,6 +229,10 @@ export default function JoinGroupPage() {
 
   return (
     <div className="container mx-auto py-10 max-w-xl px-4">
+      <Button variant="ghost" className="mb-4 pl-0 hover:bg-transparent" onClick={() => router.back()}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
       <Card>
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-primary">{group.name}</CardTitle>

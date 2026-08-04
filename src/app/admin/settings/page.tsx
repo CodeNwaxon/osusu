@@ -21,6 +21,7 @@ export interface AppSettings {
     twitter: string;
     instagram: string;
   };
+  notificationExpiryDays?: number;
 }
 
 const DEFAULT_MOCK_DATA: AppSettings = {
@@ -37,7 +38,8 @@ const DEFAULT_MOCK_DATA: AppSettings = {
     facebook: "https://facebook.com/osusu9ja",
     twitter: "https://twitter.com/osusu9ja",
     instagram: "https://instagram.com/osusu9ja",
-  }
+  },
+  notificationExpiryDays: 14
 };
 
 export default function SettingsCMSPage() {
@@ -47,7 +49,8 @@ export default function SettingsCMSPage() {
     heroImages: [],
     contactEmail: "",
     contactPhone: "",
-    socialLinks: { facebook: "", twitter: "", instagram: "" }
+    socialLinks: { facebook: "", twitter: "", instagram: "" },
+    notificationExpiryDays: 14
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -175,6 +178,28 @@ export default function SettingsCMSPage() {
                 )}
               </div>
             ))}
+
+            {/* Notification Settings */}
+            <div className="space-y-4 pt-6 border-t border-border">
+              <h3 className="text-lg font-medium text-foreground">Notification Settings</h3>
+              <div className="grid gap-4 max-w-sm">
+                <div className="space-y-2">
+                  <Label htmlFor="notificationExpiryDays">Notification Expiry (Days)</Label>
+                  <Input
+                    id="notificationExpiryDays"
+                    type="number"
+                    min="1"
+                    value={settings.notificationExpiryDays || 14}
+                    onChange={(e) => setSettings({ ...settings, notificationExpiryDays: parseInt(e.target.value) || 14 })}
+                    placeholder="14"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Number of days before user notifications are automatically deleted from the backend.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {settings.heroImages.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No hero images added. Will use fallback.</p>
             )}

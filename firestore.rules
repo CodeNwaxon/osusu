@@ -111,10 +111,12 @@ service cloud.firestore {
 
     // Notifications Collection
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all' || resource.data.targetUserId == request.auth.uid);
       allow write: if isAdmin();
-      // Allowing creating of welcome notification by the authenticated user themselves if they just signed up
+      // Allow creating notifications by authenticated users (welcome, contact_creator)
       allow create: if isAuthenticated();
+      // Allow deleting own notifications (inbox clear, expiry cleanup)
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.targetUserId == request.auth.uid);
     }
 
     // Broadcasts Collection (Admin History)
