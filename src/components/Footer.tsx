@@ -1,16 +1,67 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FaTwitter, FaInstagram, FaFacebookF, FaLinkedinIn } from "react-icons/fa";
+import { doc, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/store/useAuth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "sonner";
 import { LogOut, LogIn, Download } from "lucide-react";
 
+type SocialPlatform = "twitter" | "instagram" | "facebook" | "linkedin";
+
+const DEFAULT_SOCIAL_LINKS: Record<SocialPlatform, string> = {
+  twitter: "https://twitter.com",
+  instagram: "https://instagram.com",
+  facebook: "https://facebook.com",
+  linkedin: "https://linkedin.com",
+};
+
+const SOCIAL_PLATFORMS = [
+  { key: "twitter", label: "Twitter", Icon: FaTwitter },
+  { key: "instagram", label: "Instagram", Icon: FaInstagram },
+  { key: "facebook", label: "Facebook", Icon: FaFacebookF },
+  { key: "linkedin", label: "LinkedIn", Icon: FaLinkedinIn },
+] as const;
+
+function normalizeSocialUrl(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return "";
+
+  const input = value.trim();
+  try {
+    const url = new URL(/^(https?:)?\/\//i.test(input) ? input : `https://${input}`);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const { user } = useAuth();
+  const [socialLinks, setSocialLinks] = useState(DEFAULT_SOCIAL_LINKS);
+
+  useEffect(() => {
+    const settingsRef = doc(db, "settings", "appConfig");
+    const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+      const configured = snapshot.data()?.socialLinks as Partial<Record<SocialPlatform, unknown>> | undefined;
+      const links: Record<SocialPlatform, string> = {
+        twitter: normalizeSocialUrl(configured?.twitter),
+        instagram: normalizeSocialUrl(configured?.instagram),
+        facebook: normalizeSocialUrl(configured?.facebook),
+        linkedin: normalizeSocialUrl(configured?.linkedin),
+      };
+
+      setSocialLinks(Object.values(links).some(Boolean) ? links : DEFAULT_SOCIAL_LINKS);
+    }, (error) => {
+      console.error("Error loading footer social links:", error);
+      setSocialLinks(DEFAULT_SOCIAL_LINKS);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -80,9 +131,9 @@ export function Footer() {
           <div>
             <h4 className="font-semibold text-foreground mb-4 text-sm uppercase tracking-wider">Legal</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Contact Us</Link></li>
+              <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/contact" className="hover:text-foreground transition-colors">Contact Us</Link></li>
             </ul>
           </div>
         </div>
@@ -90,25 +141,22 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border/40 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            © {currentYear} Osusu. All rights reserved. Made with ❤️ in Nigeria.
+            © {currentYear} Osusu. All rights reserved. Made in Nigeria for Nigerians.
           </p>
           <div className="flex items-center gap-4">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-              <FaTwitter className="h-4 w-4" />
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-              <FaInstagram className="h-4 w-4" />
-            </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-              <FaFacebookF className="h-4 w-4" />
-            </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-              className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-              <FaLinkedinIn className="h-4 w-4" />
-            </a>
+            {SOCIAL_PLATFORMS.filter(({ key }) => socialLinks[key]).map(({ key, label, Icon }) => (
+              <a
+                key={key}
+                href={socialLinks[key]}
+                aria-label={label}
+                title={label}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 w-9 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/50 transition-all"
+              >
+                <Icon className="h-4 w-4" />
+              </a>
+            ))}
           </div>
         </div>
       </div>

@@ -18,12 +18,23 @@ import { FinancialNews } from "@/components/FinancialNews";
 import { AppSettings } from "./admin/settings/page";
 import { calculateExpectedPayout } from "@/lib/calculations";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Fallback image - using a data URI SVG placeholder (no local file needed)
 const FALLBACK_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='600' viewBox='0 0 1200 600'%3E%3Crect width='1200' height='600' fill='%231a1a2e'/%3E%3Ctext x='50%25' y='45%25' font-family='Arial' font-size='48' fill='%23f59e0b' text-anchor='middle' dy='.3em'%3E💰 Osusu%3C/text%3E%3Ctext x='50%25' y='55%25' font-family='Arial' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3EBuild Wealth Together%3C/text%3E%3C/svg%3E";
 
+function formatOrdinal(day: number) {
+  if (!Number.isFinite(day)) return "N/A";
+  const remainder = day % 100;
+  const suffix = remainder >= 11 && remainder <= 13
+    ? "th"
+    : ({ 1: "st", 2: "nd", 3: "rd" }[day % 10] || "th");
+  return `${day}${suffix}`;
+}
+
 export default function Home() {
   const { user } = useAuth();
+  const router = useRouter();
   const [groups, setGroups] = useState<any[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -219,7 +230,7 @@ export default function Home() {
                   className: "bg-transparent border-2 border-white/50 hover:border-white text-white hover:bg-white/10 font-semibold text-base px-6 md:px-8 h-12 rounded-full w-auto transition-all",
                 })}
               >
-                Join Osusu
+                Sign In / Sign Up
               </Link>
             )}
           </div>
@@ -311,7 +322,17 @@ export default function Home() {
             {filteredGroups.map(group => (
               <Card
                 key={group.id}
-                className="overflow-hidden border-border/30 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group/card"
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/join/${group.refCode}`)}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/join/${group.refCode}`);
+                  }
+                }}
+                className="cursor-pointer overflow-hidden border-border/30 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group/card"
               >
                 <CardHeader className="bg-muted/30 pb-4">
                   <div className="flex justify-between items-start gap-2">
@@ -322,18 +343,9 @@ export default function Home() {
                         <Badge variant="outline" className="text-[10px] bg-muted h-5 rounded-full px-1.5 ml-1">Private</Badge>
                       )}
                     </CardTitle>
-                    {group.payoutChargeType === "none" ? (
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100 whitespace-nowrap text-[10px]">
-                        No Fee
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 whitespace-nowrap text-[10px]">
-                        Fee: {group.payoutChargeType === "fixed" ? `₦${group.payoutChargeValue}` : `${group.payoutChargeValue * 100}%`}
-                      </Badge>
-                    )}
                   </div>
                   <CardDescription className="text-muted-foreground text-xs">
-                    {group.duration} Months · Payout on {group.payoutDay}th
+                    {group.duration} Months · Payout on {formatOrdinal(Number(group.payoutDay))}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-5">
@@ -351,6 +363,14 @@ export default function Home() {
                       )}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs text-muted-foreground">Joining Fee</span>
+                    <span className="text-sm font-medium">
+                      {Number(group.joiningFee) > 0
+                        ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(group.joiningFee))
+                        : "Free"}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">Members</span>
                     <span className="text-sm font-medium">{group.membersCount || 0} / {group.totalMembers}</span>
@@ -360,8 +380,9 @@ export default function Home() {
                   {(group.isPrivate || group.visibility === "private") ? (
                     <Button
                       variant="outline"
-                      className="w-full rounded-full group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors"
-                      onClick={() => {
+                      className="w-full rounded-full rounded-t-none group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors"
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setSelectedGroupToContact(group);
                         setContactEmail(user?.email || "");
                         setShowContactModal(true);
@@ -374,8 +395,9 @@ export default function Home() {
                       href={`/join/${group.refCode}`}
                       className={buttonVariants({
                         variant: "outline",
-                        className: "w-full rounded-full group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors",
+                        className: "w-full rounded-full rounded-t-none group-hover/card:border-primary/50 group-hover/card:text-primary transition-colors",
                       })}
+                      onClick={(event) => event.stopPropagation()}
                     >
                       View Details
                     </Link>

@@ -5,10 +5,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { addDoc, collection, serverTimestamp, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/store/useAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +29,7 @@ import {
 const createGroupSchema = z.object({
   name: z.string().min(3, "Group name must be at least 3 characters"),
   amount: z.coerce.number().min(1000, "Minimum contribution is ₦1,000"),
+  joiningFee: z.coerce.number().min(0, "Joining fee cannot be negative"),
   duration: z.coerce.number().min(2, "Minimum duration is 2 months").max(12, "Maximum duration is 12 months"),
   totalMembers: z.coerce.number().min(2, "Minimum members is 2").max(12, "Maximum members is 12"),
   paymentDay: z.coerce.number().min(1, "Day must be between 1 and 31").max(31, "Day must be between 1 and 31"),
@@ -62,6 +65,7 @@ export default function CreateGroupPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [groupCount, setGroupCount] = useState<number | null>(null);
 
   const form = useForm<FormValues>({
@@ -69,6 +73,7 @@ export default function CreateGroupPage() {
     defaultValues: {
       name: "",
       amount: 0,
+      joiningFee: 0,
       duration: 2,
       totalMembers: 2,
       paymentDay: 1,
@@ -85,6 +90,18 @@ export default function CreateGroupPage() {
   });
 
   const watchChargeType = form.watch("payoutChargeType");
+
+  const handleGoogleSignIn = async () => {
+    setSigningIn(true);
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      toast.success("Successfully signed in with Google.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign in with Google.");
+    } finally {
+      setSigningIn(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -220,6 +237,25 @@ export default function CreateGroupPage() {
                             }}
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="py-2">
+                  <FormField
+                    control={form.control}
+                    name="joiningFee"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Joining Fee (₦)</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" step="1" placeholder="0" {...field} disabled={isLimitReached} />
+                        </FormControl>
+                        <FormDescription>
+                          Optional amount members pay directly to you before joining. Leave at 0 for free; Osusu does not collect this payment.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -484,9 +520,16 @@ export default function CreateGroupPage() {
                   Please sign in to create a contribution group.
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading || isLimitReached}>
-                {loading ? "Creating Group..." : "Create Osusu Group"}
-              </Button>
+              {user ? (
+                <Button type="submit" className="w-full text-white" disabled={loading || isLimitReached}>
+                  {loading ? "Creating Group..." : "Create Osusu Group"}
+                </Button>
+              ) : (
+                <Button type="button" className="w-full text-white" onClick={handleGoogleSignIn} disabled={signingIn || isLimitReached}>
+                  <FcGoogle className="mr-2 h-5 w-5" />
+                  {signingIn ? "Signing in..." : "Sign in with Google"}
+                </Button>
+              )}
             </form>
           </Form>
         </CardContent>

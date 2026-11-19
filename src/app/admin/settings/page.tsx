@@ -20,6 +20,7 @@ export interface AppSettings {
     facebook: string;
     twitter: string;
     instagram: string;
+    linkedin: string;
   };
   notificationExpiryDays?: number;
 }
@@ -38,6 +39,7 @@ const DEFAULT_MOCK_DATA: AppSettings = {
     facebook: "https://facebook.com/osusu9ja",
     twitter: "https://twitter.com/osusu9ja",
     instagram: "https://instagram.com/osusu9ja",
+    linkedin: "https://linkedin.com",
   },
   notificationExpiryDays: 14
 };
@@ -49,30 +51,39 @@ export default function SettingsCMSPage() {
     heroImages: [],
     contactEmail: "",
     contactPhone: "",
-    socialLinks: { facebook: "", twitter: "", instagram: "" },
+    socialLinks: { facebook: "", twitter: "", instagram: "", linkedin: "" },
     notificationExpiryDays: 14
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const docSnap = await getDoc(doc(db, "settings", "appConfig"));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setSettings({
+            ...(data as AppSettings),
+            socialLinks: {
+              facebook: data.socialLinks?.facebook || "",
+              twitter: data.socialLinks?.twitter || "",
+              instagram: data.socialLinks?.instagram || "",
+              linkedin: data.socialLinks?.linkedin || "",
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+        toast.error("Failed to load settings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchSettings();
   }, []);
-
-  const fetchSettings = async () => {
-    setLoading(true);
-    try {
-      const docSnap = await getDoc(doc(db, "settings", "appConfig"));
-      if (docSnap.exists()) {
-        setSettings(docSnap.data() as AppSettings);
-      }
-    } catch (error) {
-      console.error("Error fetching settings:", error);
-      toast.error("Failed to load settings");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -256,6 +267,13 @@ export default function SettingsCMSPage() {
               <Input 
                 value={settings.socialLinks.instagram} 
                 onChange={e => setSettings({ ...settings, socialLinks: { ...settings.socialLinks, instagram: e.target.value }})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>LinkedIn URL</Label>
+              <Input 
+                value={settings.socialLinks.linkedin} 
+                onChange={e => setSettings({ ...settings, socialLinks: { ...settings.socialLinks, linkedin: e.target.value }})} 
               />
             </div>
           </CardContent>

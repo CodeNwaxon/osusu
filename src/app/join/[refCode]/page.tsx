@@ -257,6 +257,19 @@ export default function JoinGroupPage() {
               {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(expectedPayout)}
             </p>
           </div>
+          <div className="flex justify-between items-center p-4 bg-muted rounded-lg border">
+            <span className="font-medium text-sm">Joining Fee</span>
+            <span className="font-semibold">
+              {Number(group.joiningFee) > 0
+                ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(group.joiningFee))
+                : "Free"}
+            </span>
+          </div>
+          {Number(group.joiningFee) > 0 && (
+            <p className="text-xs text-muted-foreground">
+              The joining fee is paid directly to the group creator before joining. Osusu does not collect or verify this payment.
+            </p>
+          )}
           <div className="flex justify-between items-center p-4 bg-orange-50 border border-orange-200 rounded-lg dark:bg-orange-950/20 dark:border-orange-900">
             <span className="font-medium text-orange-850 text-sm">Admin Payout Charge</span>
             {group.payoutChargeType === "none" ? (
@@ -283,14 +296,19 @@ export default function JoinGroupPage() {
           <div className="bg-background p-6 rounded-xl max-w-md w-full space-y-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-destructive">Wait! Read This</h2>
             <p className="text-lg">
-              You will pay money <strong>directly</strong> to the admin's bank account. This app does <strong>NOT</strong> hold funds.
+              Contributions are paid <strong>directly</strong> to the admin's bank account. Osusu does <strong>not</strong> hold contribution funds.
             </p>
+            {Number(group.joiningFee) > 0 && (
+              <p className="text-sm font-medium text-foreground">
+                Before joining, pay the {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(group.joiningFee))} joining fee directly to the creator. Osusu does not collect or verify this payment.
+              </p>
+            )}
             <p className="text-muted-foreground">
               Do you trust this person? By continuing, you acknowledge the risk.
             </p>
             <div className="flex flex-col gap-4">
               <Button variant="destructive" className="w-full" onClick={confirmTrust}>
-                I Understand & Join
+                {Number(group.joiningFee) > 0 ? "I Paid the Joining Fee & Understand" : "I Understand & Join"}
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setShowTrustModal(false)}>
                 Cancel

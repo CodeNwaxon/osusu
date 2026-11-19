@@ -149,7 +149,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-border/40 bg-background p-4 space-y-3 animate-in slide-in-from-top-2">
+        <div className="fixed left-[2.5vw] top-16 z-40 h-[calc(100dvh-4rem)] w-[95vw] overflow-y-auto border border-border/40 bg-background p-4 space-y-3 shadow-xl animate-in slide-in-from-top-2 md:hidden">
           {pathname?.startsWith("/admin") ? (
             // Admin Mobile Menu
             <>

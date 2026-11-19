@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { AlertTriangle, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { useEffect, useState } from "react";
@@ -58,6 +58,8 @@ export function Reviews() {
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<ReviewData | null>(null);
+  const [deletingReview, setDeletingReview] = useState(false);
 
   const fetchReviews = async () => {
     try {
@@ -129,15 +131,21 @@ export function Reviews() {
     }
   };
 
-  const handleDeleteReview = async (reviewId: string) => {
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete) return;
+
+    setDeletingReview(true);
     try {
-      await deleteDoc(doc(db, "reviews", reviewId));
+      await deleteDoc(doc(db, "reviews", reviewToDelete.id));
       toast.success("Review deleted successfully.");
       setHasReviewed(false);
+      setReviewToDelete(null);
       fetchReviews(); // Refresh
     } catch (error) {
       console.error("Error deleting review:", error);
       toast.error("Failed to delete review.");
+    } finally {
+      setDeletingReview(false);
     }
   };
 
@@ -218,9 +226,10 @@ export function Reviews() {
             >
               {user && review.userId === user.uid && (
                 <button
-                  onClick={() => handleDeleteReview(review.id)}
+                  onClick={() => setReviewToDelete(review)}
                   className="absolute top-4 right-4 text-destructive hover:bg-destructive/10 p-2 rounded-full transition-colors"
                   title="Delete your review"
+                  aria-label="Delete your review"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -250,7 +259,7 @@ export function Reviews() {
                     <span className="text-xs font-bold text-white">{review.avatar}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{review.name}</p>
+                    <p className="text-sm font-semibold text-foreground capitalize">{review.name}</p>
                     <p className="text-xs text-muted-foreground">{review.location}</p>
                   </div>
                 </div>
@@ -259,6 +268,36 @@ export function Reviews() {
           ))}
         </div>
       </div>
+
+      {reviewToDelete && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingReview) setReviewToDelete(null);
+          }}
+        >
+          <Card className="w-full max-w-md shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="delete-review-title">
+            <CardContent className="space-y-5 p-6">
+              <div className="text-center">
+                <AlertTriangle className="mx-auto mb-3 h-10 w-10 text-destructive" />
+                <h3 id="delete-review-title" className="text-lg font-semibold text-foreground">Delete your review?</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This will permanently remove your review. This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setReviewToDelete(null)} disabled={deletingReview}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteReview} disabled={deletingReview}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {deletingReview ? "Deleting..." : "Delete Review"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </section>
   );
 }

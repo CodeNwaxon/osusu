@@ -23,6 +23,7 @@ export function NotificationsMenu() {
     const [readIds, setReadIds] = useState<string[]>([]);
     const [deletedIds, setDeletedIds] = useState<string[]>([]);
     const [isOpen, setIsOpen] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         // Load local state
@@ -126,14 +127,13 @@ export function NotificationsMenu() {
         }
     };
     const clearAll = () => {
-        if (confirm("Are you sure you want to clear all notifications?")) {
-            const allVisibleIds = visibleNotifications.map(n => n.id);
-            const newDeletedIds = [...deletedIds, ...allVisibleIds];
-            setDeletedIds(newDeletedIds);
-            if (user) {
-                localStorage.setItem(`deleted_notifications_${user.uid}`, JSON.stringify(newDeletedIds));
-            }
+        const allVisibleIds = visibleNotifications.map(n => n.id);
+        const newDeletedIds = [...deletedIds, ...allVisibleIds];
+        setDeletedIds(newDeletedIds);
+        if (user) {
+            localStorage.setItem(`deleted_notifications_${user.uid}`, JSON.stringify(newDeletedIds));
         }
+        setShowClearConfirm(false);
     };
     if (!user) return null;
     return (
@@ -154,14 +154,14 @@ export function NotificationsMenu() {
                     <div className="flex items-center justify-between p-4 border-b border-border/50 bg-muted/20">
                         <h3 className="font-semibold text-sm">Notifications</h3>
                         {visibleNotifications.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={clearAll} className="h-8 text-xs text-muted-foreground hover:text-destructive">
+                            <Button variant="ghost" size="sm" onClick={() => setShowClearConfirm(true)} className="h-8 text-xs text-foreground dark:text-gray-100 hover:text-destructive">
                                 Clear All
                             </Button>
                         )}
                     </div>
                     <div className="max-h-[70vh] overflow-y-auto">
                         {visibleNotifications.length === 0 ? (
-                            <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center">
+                            <div className="p-8 text-center text-muted-foreground dark:text-gray-300 text-sm flex flex-col items-center">
                                 <Bell className="h-8 w-8 mb-2 opacity-20" />
                                 No new notifications
                             </div>
@@ -205,7 +205,7 @@ export function NotificationsMenu() {
                                                 </div>
                                             </div>
 
-                                            <p className="text-xs text-muted-foreground mt-1 mb-2 leading-relaxed">
+                                            <p className="text-xs text-muted-foreground dark:text-gray-300 mt-1 mb-2 leading-relaxed">
                                                 {notif.message}
                                             </p>
                                             {notif.imageUrl && (
@@ -254,6 +254,21 @@ export function NotificationsMenu() {
                                 })}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {showClearConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="presentation">
+                    <div className="w-full max-w-sm rounded-xl border border-border bg-background p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="clear-notifications-title">
+                        <div className="mb-5 text-center">
+                            <Trash2 className="mx-auto mb-3 h-8 w-8 text-destructive" />
+                            <h2 id="clear-notifications-title" className="text-lg font-semibold text-foreground">Clear all notifications?</h2>
+                            <p className="mt-2 text-sm text-muted-foreground">This will remove all notifications from your list.</p>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setShowClearConfirm(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={clearAll}>Clear All</Button>
+                        </div>
                     </div>
                 </div>
             )}
